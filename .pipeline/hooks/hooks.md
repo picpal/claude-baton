@@ -1,37 +1,37 @@
 # Pipeline Hooks — claude-baton
 
-session-init        : exec.log 초기화 · .pipeline/ 디렉토리 확인
+session-init        : Initialize exec.log · Verify .pipeline/ directory
 
-post-analysis       : complexity-score.md 저장 (스택 감지 결과 포함)
+post-analysis       : Save complexity-score.md (including stack detection results)
 
-post-plan           : plan.md 저장 · [Tier3] git tag safe/baseline
+post-plan           : Save plan.md · [Tier3] git tag safe/baseline
 
-post-task           : todo.md 저장 (stack 자동 태깅 완료 상태)
+post-task           : Save todo.md (stack auto-tagging complete)
 
-post-work           : todo.md 해당 task 체크 · draft commit
+post-work           : Check off completed task in todo.md · draft commit
                       git add {scope-files}
                       git commit -m "feat(task-{id}): {summary}"
 
 unit-qa-pass        : git tag safe/task-{id}
-                      exec.log에 "QA_PASS task-{id}" 기록
+                      Log "QA_PASS task-{id}" to exec.log
 
 integration-qa-pass : git tag safe/integration-{n}
 
 qa-fail             : retry_count++
-                      3회 초과 시 → Main에 에스컬레이션 (Task Manager 재설계)
+                      If exceeded 3 retries → Escalate to Main (Task Manager redesign)
 
-post-review         : review-report.md 저장
+post-review         : Save review-report.md
 
-security-halt       : 진행 중인 모든 에이전트 즉시 종료
-                      exec.log에 SECURITY_HALT 강제 기록
-                      .pipeline/reports/security-report.md 생성
+security-halt       : Immediately terminate all running agents
+                      Force-log SECURITY_HALT to exec.log
+                      Generate .pipeline/reports/security-report.md
 
-rollback-complete   : security-constraints.md 생성 또는 업데이트
-                      lessons.md 업데이트
+rollback-complete   : Create or update security-constraints.md
+                      Update lessons.md
 
-pre-spawn           : [1] security-constraints.md 존재 시 컨텍스트 앞단에 자동 포함
-                      [2] todo.md의 해당 task stack 필드 읽어
-                          .pipeline/skills/stacks/{stack}/tdd-enforcer.md 로드
-                          해당 파일 없으면 .pipeline/skills/base/tdd-enforcer.md fallback
+pre-spawn           : [1] If security-constraints.md exists, auto-include at the front of the context
+                      [2] Read the stack field of the target task from todo.md
+                          Load .pipeline/skills/stacks/{stack}/tdd-enforcer.md
+                          If that file does not exist, fall back to .pipeline/skills/base/tdd-enforcer.md
 
-post-complete       : lessons.md 업데이트 · 종료 알림 출력
+post-complete       : Update lessons.md · Print completion notification

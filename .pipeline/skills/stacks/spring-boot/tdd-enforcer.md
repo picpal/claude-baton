@@ -1,16 +1,16 @@
 # TDD Enforcer — Spring Boot
 # extends: stacks/java/tdd-enforcer.md
 
-## 추가 프레임워크
-- MockMvc (Spring MVC 테스트)
-- @SpringBootTest + TestRestTemplate (통합 테스트)
-- @DataJpaTest (레포지토리 테스트)
+## Additional Frameworks
+- MockMvc (Spring MVC testing)
+- @SpringBootTest + TestRestTemplate (integration testing)
+- @DataJpaTest (repository testing)
 
-## Spring Boot 전용 규칙
-- 테스트 슬라이스 활용: @WebMvcTest, @DataJpaTest
-- Security 설정: @WithMockUser 활용
-- 환경변수: application-test.yml 분리
+## Spring Boot Specific Rules
+- Use test slices: @WebMvcTest, @DataJpaTest
+- Security configuration: use @WithMockUser
+- Environment variables: separate into application-test.yml
 
-## 테스트 실행
+## Running Tests
 ./gradlew test
 ./gradlew test jacocoTestReport

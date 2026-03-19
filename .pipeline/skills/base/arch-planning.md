@@ -1,16 +1,16 @@
 # Architecture Planning Skill
 
-## 역할
-시스템 아키텍처 관점에서 설계 방향을 제시한다.
+## Role
+Provide design direction from a system architecture perspective.
 
-## 검토 항목
-1. 컴포넌트 구조 — 모듈 분리 및 책임 할당
-2. 데이터 흐름 — 입력부터 출력까지의 데이터 경로
-3. 인터페이스 설계 — 모듈 간 계약 정의
-4. 확장성 — 향후 변경에 대한 유연성
-5. 기존 아키텍처 정합성 — 현재 코드베이스와의 일관성
+## Review Items
+1. Component structure — Module separation and responsibility assignment
+2. Data flow — Data path from input to output
+3. Interface design — Contract definitions between modules
+4. Scalability — Flexibility for future changes
+5. Existing architecture alignment — Consistency with the current codebase
 
-## 산출물
-- 아키텍처 다이어그램 (텍스트 기반)
-- 컴포넌트 책임 정의
-- 인터페이스 명세
+## Output
+- Architecture diagram (text-based)
+- Component responsibility definitions
+- Interface specifications

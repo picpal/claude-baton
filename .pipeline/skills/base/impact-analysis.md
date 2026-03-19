@@ -1,15 +1,15 @@
 # Impact Analysis Skill
 
-## 역할
-변경 사항이 기존 코드베이스에 미치는 영향을 분석한다.
+## Role
+Analyze the impact of changes on the existing codebase.
 
-## 분석 항목
-1. 직접 영향 파일 — 수정 대상 파일 목록
-2. 간접 영향 파일 — import/require로 연결된 의존 파일
-3. 테스트 영향 — 수정으로 인해 깨질 수 있는 기존 테스트
-4. API 영향 — 외부 인터페이스 변경 여부
+## Analysis Items
+1. Directly affected files — List of files to be modified
+2. Indirectly affected files — Dependent files connected via import/require
+3. Test impact — Existing tests that may break due to modifications
+4. API impact — Whether external interfaces are changed
 
-## 산출물
-- 영향도 매트릭스 (파일별 직접/간접 영향)
-- 위험도 평가 (High/Medium/Low)
-- 권장 테스트 범위
+## Output
+- Impact matrix (direct/indirect impact per file)
+- Risk assessment (High/Medium/Low)
+- Recommended test scope

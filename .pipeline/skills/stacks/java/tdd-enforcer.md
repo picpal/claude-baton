@@ -1,22 +1,22 @@
 # TDD Enforcer — Java
 # extends: base/tdd-enforcer.md
 
-## 테스트 프레임워크
+## Test Framework
 - JUnit 5 + Mockito
 
-## 테스트 실행
+## Test Execution
 mvn test
 ./gradlew test
 
-## 커버리지
-- 도구: JaCoCo
-- 기준: 라인 커버리지 80% 이상
-- 확인: build/reports/jacoco/index.html
+## Coverage
+- Tool: JaCoCo
+- Threshold: Line coverage 80% or above
+- Report: build/reports/jacoco/index.html
 
-## Java 전용 보안 규칙
-- SQL: PreparedStatement 또는 JPA 사용 (String 직접 조합 금지)
-- 시크릿: 환경변수 또는 Vault (하드코딩 금지)
-- 입력값: Bean Validation (@NotNull, @Size 등)
+## Java-Specific Security Rules
+- SQL: use PreparedStatement or JPA (no direct String concatenation)
+- Secrets: environment variables or Vault (no hardcoding)
+- Input validation: Bean Validation (@NotNull, @Size, etc.)
 
 ## scope-lock
-할당 파일 외 수정 발견 시 → "SCOPE_EXCEED: {파일명}" Main 보고 후 대기
+If modifications outside assigned files are detected → report "SCOPE_EXCEED: {filename}" to Main and wait

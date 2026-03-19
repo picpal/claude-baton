@@ -1,22 +1,22 @@
 # TDD Enforcer — Rust
 # extends: base/tdd-enforcer.md
 
-## 테스트 프레임워크
-- 내장 #[test] / #[cfg(test)]
-- 통합 테스트: tests/ 디렉토리
+## Test Framework
+- Built-in #[test] / #[cfg(test)]
+- Integration tests: tests/ directory
 
-## 테스트 실행
+## Running Tests
 cargo test
 cargo tarpaulin --out Html
 
-## 커버리지
-- 도구: cargo-tarpaulin
-- 기준: 80% 이상
+## Coverage
+- Tool: cargo-tarpaulin
+- Threshold: 80% or above
 
-## Rust 전용 규칙
-- unsafe 블록: Security Guardian 즉시 감사 대상
-- unwrap() 금지 → expect() 또는 ? 연산자
-- 시크릿: std::env::var (하드코딩 금지)
+## Rust Specific Rules
+- unsafe blocks: subject to immediate Security Guardian audit
+- No unwrap() → use expect() or ? operator
+- Secrets: std::env::var (no hardcoding)
 
 ## scope-lock
-할당 파일 외 수정 발견 시 → "SCOPE_EXCEED: {파일명}" Main 보고 후 대기
+If modifications outside assigned files are detected → report "SCOPE_EXCEED: {filename}" to Main and wait

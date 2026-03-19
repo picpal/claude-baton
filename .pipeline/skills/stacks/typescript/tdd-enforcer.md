@@ -1,22 +1,22 @@
 # TDD Enforcer — TypeScript
 # extends: base/tdd-enforcer.md
 
-## 테스트 프레임워크
-- Jest 또는 Vitest
-- 타입 안전성: ts-jest 또는 vitest 내장 TypeScript 지원
+## Test Framework
+- Jest or Vitest
+- Type safety: ts-jest or Vitest built-in TypeScript support
 
-## 테스트 실행
+## Test Execution
 npm test
 npm test -- --coverage
 
-## 커버리지
-- 도구: istanbul (Jest 내장) / v8 (Vitest)
-- 기준: 라인 커버리지 80% 이상
+## Coverage
+- Tool: istanbul (built into Jest) / v8 (Vitest)
+- Threshold: Line coverage 80% or above
 
-## TypeScript 전용 규칙
-- any 타입 사용 금지 → unknown 또는 제네릭
-- 시크릿: process.env.KEY (하드코딩 금지)
-- null 체크: optional chaining (?.) 활용
+## TypeScript-Specific Rules
+- No use of any type → use unknown or generics
+- Secrets: process.env.KEY (no hardcoding)
+- Null checks: use optional chaining (?.)
 
 ## scope-lock
-할당 파일 외 수정 발견 시 → "SCOPE_EXCEED: {파일명}" Main 보고 후 대기
+If modifications outside assigned files are detected → report "SCOPE_EXCEED: {filename}" to Main and wait

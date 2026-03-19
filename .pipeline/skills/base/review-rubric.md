@@ -1,33 +1,33 @@
 # Code Review Rubric
 
 ## Security Guardian (Tier 2, 3)
-Critical: security-pattern-library의 CRITICAL/HIGH 패턴 발견
-  → 즉시 보안 Rollback 프로토콜 실행
-Warning:  MEDIUM 패턴 발견
-Pass:     보안 이슈 없음
+Critical: CRITICAL/HIGH pattern found from security-pattern-library
+  → Immediately execute Security Rollback Protocol
+Warning:  MEDIUM pattern found
+Pass:     No security issues
 
 ## Quality Inspector (Tier 2, 3)
-Critical: 중복 코드 30줄+ / 함수 길이 50줄+ / 매직 넘버 다수
-Warning:  네이밍 불명확 / 복잡 로직 주석 부재
-Pass:     품질 기준 충족
+Critical: Duplicate code 30+ lines / function length 50+ lines / numerous magic numbers
+Warning:  Unclear naming / missing comments for complex logic
+Pass:     Quality standards met
 
 ## TDD Enforcer (Tier 2, 3)
-Critical: 테스트 없는 구현 코드 존재 / 커버리지 60% 미만
-Warning:  커버리지 60~80% / 엣지 케이스 미테스트
-Pass:     TDD 원칙 준수
+Critical: Implementation code without tests / coverage below 60%
+Warning:  Coverage 60-80% / edge cases not tested
+Pass:     TDD principles followed
 
-## Performance Analyst (Tier 3 전용)
-Critical: O(n²) 불필요 중첩 루프 / N+1 쿼리
-Warning:  최적화 가능한 쿼리 / 불필요한 재계산
-Pass:     성능 기준 충족
+## Performance Analyst (Tier 3 only)
+Critical: Unnecessary O(n²) nested loops / N+1 queries
+Warning:  Optimizable queries / unnecessary recomputation
+Pass:     Performance standards met
 
-## Standards Keeper (Tier 3 전용)
-Critical: 컨벤션 전면 위반 / API 문서 없음
-Warning:  일부 컨벤션 불일치
-Pass:     표준 준수
+## Standards Keeper (Tier 3 only)
+Critical: Wholesale convention violations / missing API documentation
+Warning:  Partial convention inconsistencies
+Pass:     Standards followed
 
-## 최종 판정 규칙
-- Security Critical       → 즉시 보안 Rollback 프로토콜
-- 그 외 Critical 1개 이상 → Main 보고 → Task Manager 재귀
-- Warning만               → todo.md에 개선 항목 추가 후 완료
-- 전체 Pass               → 완료 승인
+## Final Verdict Rules
+- Security Critical       → Immediately execute Security Rollback Protocol
+- Any other Critical (1+) → Report to Main → Task Manager recursion
+- Warnings only           → Add improvement items to todo.md and complete
+- All Pass                → Approve completion

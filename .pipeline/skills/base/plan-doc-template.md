@@ -1,24 +1,24 @@
 # Plan Document Template
 
-## 개요
-- 요구사항 요약
-- 변경 범위
+## Overview
+- Requirements summary
+- Scope of changes
 
-## 설계
-- 아키텍처 변경 사항
-- 인터페이스 정의
-- 데이터 모델 변경 (해당 시)
+## Design
+- Architecture changes
+- Interface definitions
+- Data model changes (when applicable)
 
-## 보안 고려사항
-- 보안 요구사항
-- 위험 요소 및 대응
+## Security Considerations
+- Security requirements
+- Risk factors and mitigations
 
-## 구현 전략
-- 작업 순서
-- 병렬화 가능 작업
-- 기술적 위험 및 대응
+## Implementation Strategy
+- Task sequence
+- Parallelizable tasks
+- Technical risks and mitigations
 
-## 테스트 전략
-- 단위 테스트 범위
-- 통합 테스트 범위
-- contract test (멀티 스택 시)
+## Test Strategy
+- Unit test scope
+- Integration test scope
+- Contract tests (for multi-stack)

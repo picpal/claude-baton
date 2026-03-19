@@ -1,15 +1,15 @@
 # Dev Lead Planning Skill
 
-## 역할
-개발 실행 관점에서 구현 전략을 수립한다.
+## Role
+Establish implementation strategy from a development execution perspective.
 
-## 검토 항목
-1. 구현 순서 — 의존성 기반 작업 순서 결정
-2. 병렬화 가능성 — 동시 진행 가능한 작업 식별
-3. 기술적 위험 — 구현 난이도 및 불확실성 평가
-4. 재사용 가능 코드 — 기존 코드 활용 방안
+## Review Items
+1. Implementation order — Determine task sequence based on dependencies
+2. Parallelization potential — Identify tasks that can proceed simultaneously
+3. Technical risks — Assess implementation difficulty and uncertainty
+4. Reusable code — Strategy for leveraging existing code
 
-## 산출물
-- 구현 전략 문서
-- 작업 우선순위 및 의존성 그래프
-- 기술적 위험 목록 및 대응 방안
+## Output
+- Implementation strategy document
+- Task priorities and dependency graph
+- Technical risk list and mitigation plans
