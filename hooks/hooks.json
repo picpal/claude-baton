@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Agent",
+        "command": "bash hooks/scripts/detect-stack.sh pre-spawn"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "command": "bash hooks/scripts/log-event.sh post-tool"
+      }
+    ]
+  }
+}
