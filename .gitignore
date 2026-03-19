@@ -1,2 +1,3 @@
 .pipeline/logs/
 .pipeline/reports/
+*.ko.md
