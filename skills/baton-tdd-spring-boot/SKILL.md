@@ -1,9 +1,10 @@
 ---
 name: baton-tdd-spring-boot
 description: |
-  TDD rules and QA checklist for Spring Boot projects.
-  Extends baton-tdd-java with Spring Boot-specific testing frameworks,
-  security rules, and quality checks.
+  TDD rules and QA checklist for Spring Boot applications (SpringApplication, spring-boot-starter-* dependencies).
+  Uses MockMvc, @SpringBootTest, @WebMvcTest, @DataJpaTest, application-test.yml, @WithMockUser for testing.
+  Trigger when: project contains spring-boot-starter dependencies, SpringApplication class, or Spring Boot auto-configuration.
+  Do NOT use for pure Java projects without Spring Boot (use baton-tdd-java) or Kotlin-only projects (use baton-tdd-kotlin).
 extends: baton-tdd-java
 allowed-tools: Read, Write, Bash
 ---

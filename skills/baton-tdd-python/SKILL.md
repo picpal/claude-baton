@@ -1,9 +1,12 @@
 ---
 name: baton-tdd-python
 description: |
-  TDD rules and QA checklist for Python projects.
-  Extends baton-tdd-base with Python-specific frameworks,
-  security rules, and quality checks.
+  Python TDD 규칙 및 QA 체크리스트. pytest, coverage.py, mypy, python-dotenv, SQLAlchemy 기반.
+  Use this skill when: Python/Django/Flask/FastAPI 프로젝트의 TDD 규칙이 필요할 때.
+  Trigger: "파이썬 TDD", "Python 테스트", "pytest 규칙", "FastAPI 테스트", "Django TDD", "Flask 테스트".
+  NOT for: Go/Rust/Java/Swift projects — use the corresponding baton-tdd-{lang} skill instead.
+  Extends baton-tdd-base with Python-specific frameworks (pytest, coverage.py, mypy),
+  security rules (python-dotenv, SQLAlchemy ORM), and quality checks.
 extends: baton-tdd-base
 allowed-tools: Read, Write, Bash
 ---

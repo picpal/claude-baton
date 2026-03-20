@@ -1,9 +1,16 @@
 ---
 name: baton-qa-checklist
 description: |
-  QA checklist for unit tests, integration tests, and multi-stack contract tests.
-  Defines failure handling with escalation after 3 failed attempts.
-allowed-tools: Read, Bash
+  QA gate for test results. Invoke this skill whenever the user asks you to: judge if tests
+  passed or failed, check coverage against a threshold, diagnose regression vs new bug from
+  test output, verify API contract field/type matching between backend and frontend, escalate
+  repeated test failures, or decide whether a task is ready for code review based on test outcomes.
+  Covers pytest, JUnit, integration tests, and multi-stack contract verification.
+  테스트 결과 판정, 커버리지 판단, QA 합격/불합격, regression 분석, API 스펙 일치 검증,
+  반복 실패 에스컬레이션에 사용하세요.
+  Do NOT use for writing tests, running tests, explaining test code, code style review,
+  or performance optimization.
+allowed-tools: Read, Bash, TaskUpdate, TaskGet
 ---
 
 # QA Checklist Skill
@@ -27,5 +34,6 @@ allowed-tools: Read, Bash
 - [ ] Error response format is consistent
 
 ## Failure Handling
-- Attempts 1-3: Request fix from Worker
-- Beyond 3 attempts: Escalate to Main (request Task Manager redesign)
+- Attempts 1-3: Request fix from Worker + `TaskUpdate(status: "blocked")`
+- Beyond 3 attempts: `TaskUpdate(status: "escalated")` + Escalate to Main (request Task Manager redesign)
+- QA 통과 시: 별도 상태 변경 없음 (Worker의 "done" 유지)

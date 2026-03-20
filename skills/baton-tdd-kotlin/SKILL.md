@@ -1,9 +1,11 @@
 ---
 name: baton-tdd-kotlin
 description: |
-  TDD rules and QA checklist for Kotlin projects.
-  Extends baton-tdd-java with Kotlin-specific testing frameworks,
-  security rules, and quality checks.
+  TDD rules and QA checklist for Kotlin projects (suspend 함수, data class, sealed class, coroutine, kotlinx).
+  Uses MockK instead of Mockito, kotlinx-coroutines-test for coroutine testing, runTest blocks for suspend functions.
+  Enforces no !! operator, sealed class exhaustiveness, and data class immutability.
+  Trigger when: project has .kt source files, build.gradle.kts, or kotlin plugin in build configuration.
+  Do NOT use for pure Java projects (use baton-tdd-java) or Spring Boot projects without Kotlin (use baton-tdd-spring-boot).
 extends: baton-tdd-java
 allowed-tools: Read, Write, Bash
 ---

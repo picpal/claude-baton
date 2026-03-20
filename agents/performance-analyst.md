@@ -2,6 +2,8 @@
 name: performance-analyst
 description: Performance reviewer for Tier 3 only.
 model: sonnet
+effort: medium
+maxTurns: 10
 skills:
   - baton-review-rubric
 allowed-tools: Read, Grep

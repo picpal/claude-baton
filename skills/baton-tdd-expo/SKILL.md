@@ -1,9 +1,12 @@
 ---
 name: baton-tdd-expo
 description: |
-  TDD rules and QA checklist for Expo projects.
-  Extends baton-tdd-react-native with Expo-specific testing frameworks,
-  security rules, and quality checks.
+  TDD skill for Expo managed/bare workflow projects — app.json, app.config.js, expo-secure-store, Maestro E2E, EAS Build.
+  NOT for React Native bare workflow without Expo (use baton-tdd-react-native with Detox instead).
+  NOT for plain React web or Next.js projects.
+  Triggers when: package.json has expo dependency OR app.json/app.config.js with Expo config exists.
+  Uses Maestro for E2E (NOT Detox). Sensitive data must use expo-secure-store (NOT AsyncStorage).
+  Extends baton-tdd-react-native with Expo-specific testing frameworks, security rules, and quality checks.
 extends: baton-tdd-react-native
 allowed-tools: Read, Write, Bash
 ---

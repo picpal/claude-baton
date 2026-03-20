@@ -2,6 +2,8 @@
 name: interview-agent
 description: Identifies ambiguous requirements and asks targeted questions.
 model: sonnet
+effort: medium
+maxTurns: 10
 skills:
   - baton-orchestrator
 allowed-tools: Read

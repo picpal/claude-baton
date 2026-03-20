@@ -1,5 +1,10 @@
 {
   "hooks": {
+    "InstructionsLoaded": [
+      {
+        "command": "bash hooks/scripts/on-instructions-loaded.sh"
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Agent",
@@ -10,6 +15,26 @@
       {
         "matcher": "Bash",
         "command": "bash hooks/scripts/log-event.sh post-tool"
+      }
+    ],
+    "StopFailure": [
+      {
+        "command": "bash hooks/scripts/on-stop-failure.sh"
+      }
+    ],
+    "PostCompact": [
+      {
+        "command": "bash hooks/scripts/on-post-compact.sh"
+      }
+    ],
+    "WorktreeCreate": [
+      {
+        "command": "bash hooks/scripts/log-event.sh worktree-created"
+      }
+    ],
+    "WorktreeRemove": [
+      {
+        "command": "bash hooks/scripts/log-event.sh worktree-removed"
       }
     ]
   }

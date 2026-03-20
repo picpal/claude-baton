@@ -2,6 +2,8 @@
 name: quality-inspector
 description: Code quality reviewer for Tier 2 and 3.
 model: sonnet
+effort: medium
+maxTurns: 10
 skills:
   - baton-review-rubric
 allowed-tools: Read, Grep

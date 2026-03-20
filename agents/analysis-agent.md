@@ -2,6 +2,8 @@
 name: analysis-agent
 description: Scans codebase, auto-detects tech stacks, analyzes change impact, and computes complexity score.
 model: opus
+effort: high
+maxTurns: 20
 skills:
   - baton-stack-detector
   - baton-orchestrator

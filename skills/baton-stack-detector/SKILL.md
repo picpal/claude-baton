@@ -1,84 +1,59 @@
 ---
 name: baton-stack-detector
 description: |
-  Tech stack auto-detection skill.
-  Activates on codebase analysis requests.
-  Reads build files (package.json, build.gradle, go.mod, etc.)
-  to confirm stacks and records them in complexity-score.md.
-  Never assumes — always reads from files.
+  MUST USE for codebase analysis and tech stack detection.
+  Activate whenever the user asks to analyze a codebase, detect what technologies or frameworks
+  are used, identify the project's tech stack, or when any other baton skill needs stack information.
+  Triggers on: "코드베이스 분석", "스택이 뭐야", "프로젝트 구조 파악", "기술 스택 확인",
+  "analyze codebase", "what stack", "detect framework", "what technologies".
+  Also activates automatically as part of the baton-orchestrator pipeline during the Analysis phase.
+  Reads build files (package.json, build.gradle, go.mod, Cargo.toml, etc.) to confirm stacks.
+  Never assumes — always reads from actual files to verify.
 allowed-tools: Read, Glob, Bash, Write
 ---
 
-# Codebase Scanner Skill
+# Codebase Scanner
 
-## Role
-Analyze codebase structure and automatically detect the tech stack.
-Detection results are recorded in complexity-score.md and referenced whenever any agent is spawned afterward.
-Never assume the stack. Always read from files to confirm.
+## Core Principle
+Never assume the stack. Always read build files to confirm. Detection results go into .baton/complexity-score.md.
 
-## Primary Scan (performed in parallel while waiting for interview)
+## Detection Priority
+1. Build files first (package.json, build.gradle, pom.xml, go.mod, Cargo.toml, etc.)
+2. Dependency analysis within build files (determines sub-stack like expo vs react-native)
+3. File extensions as fallback only
 
-### Stack Auto-Detection Order
-1. Search for the following files in root and each directory:
-   - package.json            → Identify JS/TS family
-   - build.gradle            → Identify Java / Kotlin / Spring Boot
-   - pom.xml                 → Identify Java / Maven
-   - requirements.txt / pyproject.toml → Identify Python
-   - go.mod                  → Identify Go
-   - Cargo.toml              → Identify Rust
-   - Package.swift / *.xcodeproj → Identify Swift
-   - app.json / app.config.js → Identify Expo
+Use `scripts/detect-stack.sh <directory>` for automated detection.
+For detailed rules → references/detection-rules.md
 
-2. When package.json is found, check dependencies:
-   - "react-native" present   → react-native
-   - "expo" present            → expo (react-native extends)
-   - "next" present            → next
-   - "react" present (none above) → react
-   - None of the above        → typescript (or node)
+## Quick Decision Tree
 
-3. When build.gradle / pom.xml is found:
-   - "org.springframework.boot" present → spring-boot (java extends)
-   - kotlin plugin present              → kotlin (java extends)
-   - None of the above                  → java
+**package.json found?**
+→ expo dep? → expo | react-native dep? → react-native | next dep? → next | react dep? → react | else → typescript/node
 
-4. Confirm per-directory mapping:
-   e.g.) backend/ → spring-boot, mobile/ → expo
+**build.gradle/pom.xml found?**
+→ spring-boot plugin? → spring-boot | kotlin plugin? → kotlin | else → java
 
-### File → Stack Mapping Rules (supplementary)
-- *.java, *.kt    → java / kotlin
-- *.swift         → swift
-- *.py            → python
-- *.go            → go
-- *.rs            → rust
-- *.tsx, *.ts     → Follow parent directory stack (build file detection takes priority)
+**Other build files?**
+→ requirements.txt/pyproject.toml → python | go.mod → go | Cargo.toml → rust | Package.swift → swift
 
-## Secondary Scan (after requirements are confirmed)
-- List of files affected by changes
-- Related interfaces and type definitions
-- Dependency graph (based on change targets)
-- Check for cross-stack API interfaces (determine if contract tests are needed for multi-stack)
+## Multi-Stack Handling
+- Scan each top-level directory independently
+- Map each directory to its detected stack
+- If cross-stack API interfaces exist → mark "contract test required: YES"
 
-## Output: complexity-score.md Format
+## Output Format (.baton/complexity-score.md)
 ```
 ## Detected Stack
-| Path      | Stack       | Evidence File                          |
-|-----------|-------------|----------------------------------------|
-| backend/  | spring-boot | build.gradle (spring-boot-starter-web) |
-| mobile/   | expo        | package.json (expo ^51.0.0)            |
+| Path | Stack | Evidence File |
+|------|-------|--------------|
 
 ## File → Stack Mapping
-*.java, *.kt (backend/) → spring-boot / kotlin
-*.tsx, *.ts  (mobile/)  → expo / react-native
+(extension → stack per directory)
 
 ## Multi-Stack Status
-- Multi-stack: YES
-- API contract test required: YES (interface exists between backend ↔ mobile)
+- Multi-stack: YES/NO
+- API contract test required: YES/NO
 
 ## Complexity Score
-- Estimated files to change: N files (Npt)
-- Cross-service dependency: Yes/No
-- New feature: Yes/No
-- Architecture decision: Yes/No
-- Security-related: Yes/No
 → Total: Npt → Tier N
 ```

@@ -2,6 +2,8 @@
 name: security-guardian
 description: Security reviewer. Only agent authorized to declare CRITICAL/HIGH Rollback.
 model: opus
+effort: high
+maxTurns: 20
 skills:
   - baton-security-patterns
   - baton-review-rubric

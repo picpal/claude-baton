@@ -1,9 +1,11 @@
 ---
 name: baton-tdd-next
 description: |
-  TDD rules and QA checklist for Next.js projects.
-  Extends baton-tdd-react with Next.js-specific testing patterns,
-  security rules, and quality checks.
+  TDD skill for Next.js framework projects — SSR/SSG, API Routes, Server/Client Components, Playwright E2E, next build 검증.
+  NOT for plain React SPA (use baton-tdd-react) or React Native/Expo mobile (use their respective skills).
+  Triggers when: package.json has next dependency OR next.config.js/next.config.ts exists.
+  Covers NEXT_PUBLIC_ env var rules, server-only data isolation, and API Route security.
+  Extends baton-tdd-react with Next.js-specific testing patterns, security rules, and quality checks.
 extends: baton-tdd-react
 allowed-tools: Read, Write, Bash
 ---

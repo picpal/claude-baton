@@ -1,42 +1,22 @@
 ---
 name: baton-review-rubric
 description: |
-  Code review rubric for Security Guardian, Quality Inspector, TDD Enforcer,
-  Performance Analyst (Tier 3), and Standards Keeper (Tier 3).
-  Defines Critical/Warning/Pass verdicts and final judgment rules.
+  Use this skill when the user asks for: code review, 코드 리뷰, PR review,
+  PR 검토, review rubric, review checklist, 리뷰 기준, 코드 검토,
+  security review, quality review, TDD review, or any code inspection task.
+  Provides Critical/Warning/Pass verdict rubric for Tier 2 (3 reviewers)
+  and Tier 3 (5 reviewers) code reviews.
 allowed-tools: Read
 ---
 
-# Code Review Rubric
+# Code Review — Final Verdict Rules
 
-## Security Guardian (Tier 2, 3)
-Critical: CRITICAL/HIGH pattern found from security-pattern-library
-  → Immediately execute Security Rollback Protocol
-Warning:  MEDIUM pattern found
-Pass:     No security issues
+| Condition | Action |
+|-----------|--------|
+| Security Critical | Immediately execute Security Rollback Protocol |
+| Any other Critical (1+) | Report to Main → Task Manager recursion |
+| Warnings only | Add improvement items to todo.md and complete |
+| All Pass | Approve completion |
 
-## Quality Inspector (Tier 2, 3)
-Critical: Duplicate code 30+ lines / function length 50+ lines / numerous magic numbers
-Warning:  Unclear naming / missing comments for complex logic
-Pass:     Quality standards met
-
-## TDD Enforcer (Tier 2, 3)
-Critical: Implementation code without tests / coverage below 60%
-Warning:  Coverage 60-80% / edge cases not tested
-Pass:     TDD principles followed
-
-## Performance Analyst (Tier 3 only)
-Critical: Unnecessary O(n²) nested loops / N+1 queries
-Warning:  Optimizable queries / unnecessary recomputation
-Pass:     Performance standards met
-
-## Standards Keeper (Tier 3 only)
-Critical: Wholesale convention violations / missing API documentation
-Warning:  Partial convention inconsistencies
-Pass:     Standards followed
-
-## Final Verdict Rules
-- Security Critical       → Immediately execute Security Rollback Protocol
-- Any other Critical (1+) → Report to Main → Task Manager recursion
-- Warnings only           → Add improvement items to todo.md and complete
-- All Pass                → Approve completion
+Tier 2 rubric (3 reviewers): see `references/tier2-rubric.md`
+Tier 3 rubric (5 reviewers): see `references/tier3-rubric.md`

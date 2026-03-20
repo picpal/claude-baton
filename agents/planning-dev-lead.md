@@ -2,6 +2,8 @@
 name: planning-dev-lead
 description: Dev Lead for Tier 3 planning. Establishes implementation strategy.
 model: opus
+effort: high
+maxTurns: 15
 skills:
   - baton-orchestrator
 allowed-tools: Read, Write
