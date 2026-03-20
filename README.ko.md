@@ -67,6 +67,7 @@ claude-baton은 빌드 파일(package.json, build.gradle, go.mod 등)을 읽어 
 |--------|------|
 | `/baton:init` | 현재 프로젝트에서 파이프라인 초기화 |
 | `/baton:status` | 파이프라인 상태 표시 |
+| `/baton:checkpoint` | 체크포인트 저장, 목록, 복원 |
 | `/baton:rollback` | 마지막 safe 태그로 보안 롤백 |
 | `/baton:tier` | 현재 티어 표시/변경 |
 

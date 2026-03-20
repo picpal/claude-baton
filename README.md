@@ -66,6 +66,7 @@ All workers follow strict TDD: test first, implement second, refactor third.
 |---------|-------------|
 | `/baton:init` | Initialize pipeline in current project |
 | `/baton:status` | Show pipeline status |
+| `/baton:checkpoint` | Save, list, and restore named checkpoints |
 | `/baton:rollback` | Security rollback to last safe tag |
 | `/baton:tier` | Show/override current Tier |
 
