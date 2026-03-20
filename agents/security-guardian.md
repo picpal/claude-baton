@@ -30,7 +30,7 @@ Review code for security vulnerabilities. The ONLY agent authorized to declare C
 When CRITICAL/HIGH is found:
 1. Immediately halt the entire pipeline
 2. git revert — bulk revert to the last safe/task-{n} tag (partial revert prohibited)
-3. Immediately notify user + force Ask Mode ON
+3. Immediately notify user and wait for confirmation before resuming
 4. Auto-generate .pipeline/reports/security-report.md
 5. Re-enter Phase 3 (Planning) — not Task Manager
 6. security-constraints.md auto-included in all subsequent spawns

@@ -16,7 +16,7 @@ Interview
 ```
 
 ## Tier 3-Specific Rules
-- **Ask Mode forced ON**: All major decisions require user confirmation
+- **Auto-proceed**: Phases transition automatically, same as other tiers. Only Interview is interactive.
 - **safe/baseline tag**: Created immediately after Planning completion
 - **All workers default to opus model** unless explicitly downgraded
 
@@ -56,7 +56,7 @@ Trigger: Security Guardian declares CRITICAL or HIGH severity
 
 1. **Halt**: Immediately stop all pipeline activity
 2. **Revert**: `git revert` to last safe tag (bulk revert, no partial)
-3. **Notify**: Alert user immediately, force Ask Mode ON
+3. **Notify**: Alert user immediately, wait for confirmation before resuming
 4. **Report**: Auto-generate .baton/reports/security-report.md
 5. **Re-plan**: Re-enter Phase 3 (Planning), not Task Manager
 6. **Constrain**: security-constraints.md auto-included in all subsequent spawns

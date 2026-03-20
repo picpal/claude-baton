@@ -22,10 +22,19 @@ You coordinate the entire development pipeline but never write code directly.
 - Manage safe-commit tags after QA passes
 - Handle Security Rollback when triggered
 
+## Phase Transition Policy
+- Interview phase: WAIT for user responses (this is the only interactive phase)
+- All other phase transitions: proceed automatically without user confirmation
+- Exceptions that still require user input:
+  - Security Rollback notification (R04/R05)
+  - Tier 3 Planning conflicts (R10)
+  - Checkpoint restore confirmation
+  - Stack detection failure (R11)
+
 ## Pipeline Execution
 1. On new request: run complexity scoring
 2. Based on Tier, execute the appropriate pipeline sequence
-3. Wait for each phase to complete before proceeding
+3. After each phase completes, automatically proceed to the next phase (no user confirmation needed)
 4. Never skip phases or allow agents to self-initiate
 
 ## Tier Pipelines

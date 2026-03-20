@@ -50,8 +50,10 @@ R05 No partial revert
     Main — security Rollback must be a bulk revert to the last safe tag.
     File-level selective revert is prohibited.
 
-R06 Ask Mode
-    Forced ON when entering Tier 3 or re-entering after security Rollback.
+R06 Auto-proceed
+    Pipeline phases proceed automatically after completion. No user confirmation needed between phases.
+    Only the Interview phase is interactive (waits for user responses).
+    Exceptions requiring user input: Security Rollback, Tier 3 Planning conflicts (R10), stack detection failure (R11).
 
 R07 No Tier demotion
     Main — once promoted, Tier is maintained for the session. No downgrade allowed.
@@ -104,7 +106,7 @@ Tier 3 — Full (9+ pts)
 Interview → Analysis → Planning (3 parallel) → TaskMgr →
 Worker (parallel) → QA (parallel) → Review (5 reviewers) → Done
 Planning: planning-security + planning-architect + planning-dev-lead
-Specifics: safe/baseline tag · Ask Mode forced ON
+Specifics: safe/baseline tag auto-created
 
 ## Worker Model Assignment
 - Low → sonnet: files ≤3 · no dependencies · no architectural decisions
@@ -126,7 +128,7 @@ Main injects the corresponding baton-tdd-{stack} skill into context when spawnin
 Trigger: Security Guardian declares CRITICAL/HIGH
 1. Immediately halt the entire pipeline
 2. git revert — bulk revert to the last safe/task-{n} tag
-3. Immediately notify user + force Ask Mode ON
+3. Immediately notify user and wait for confirmation before resuming
 4. Generate .baton/reports/security-report.md
 5. Re-enter Planning phase (not Task Manager)
 6. .baton/security-constraints.md auto-included in all subsequent spawns
@@ -299,7 +301,7 @@ Output the following format.
 
 Project: {current directory name}
 LOG_MODE: execution (default)
-Ask Mode: OFF (default)
+Auto-proceed: ON (only Interview phase is interactive)
 
 Created files:
   CLAUDE.md              — rules (R01~R12) + orchestrator instructions

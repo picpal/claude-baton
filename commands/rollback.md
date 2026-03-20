@@ -30,8 +30,7 @@ Execute a security rollback to the last safe tag.
    - **rule**: {imperative prevention rule derived from the finding}
    - **files**: {files that contained the vulnerability}
    ```
-8. Force Ask Mode ON
-9. Notify user
+8. Notify user and wait for confirmation before resuming pipeline
 
 ## Strictly Prohibited
 - Selective per-file revert

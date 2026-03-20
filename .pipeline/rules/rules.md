@@ -14,7 +14,9 @@ R04 Rollback authority      : Only Security Guardian can declare CRITICAL/HIGH R
 R05 No partial revert       : Main — Security Rollback must be a full batch revert based on the safe tag.
                               Selective per-file revert is prohibited.
 
-R06 Ask Mode                : Forced ON upon entering Tier 3 / upon re-entry after a security Rollback.
+R06 Auto-proceed            : Pipeline phases proceed automatically after completion. No user confirmation needed between phases.
+                              Only the Interview phase is interactive (waits for user responses).
+                              Exceptions requiring user input: Security Rollback, Tier 3 Planning conflicts (R10), stack detection failure (R11).
 
 R07 No Tier demotion        : Main — An escalated Tier is maintained for the session. Downgrade is not allowed.
 

@@ -42,7 +42,7 @@ Interview → Analysis (with stack detection) → Planning (single) → TaskMgr 
 **Tier 3 — Full**
 Interview → Analysis (with stack detection) → Planning (3 parallel) → TaskMgr → Worker (parallel) → QA (parallel) → Review (5 reviewers) → Done
 3 Planners: Security Architect + System Architect + Dev Lead
-Tier 3 specifics: safe/baseline tag auto-created · Ask Mode forced ON
+Tier 3 specifics: safe/baseline tag auto-created
 
 ## Worker Stack-specific Skill Injection (Automatic)
 When the Task Manager writes todo.md, it references the file→stack mapping in complexity-score.md
@@ -62,7 +62,7 @@ to auto-tag each task with its stack. Main injects the corresponding stacks/ ski
 Trigger: Security Guardian declares CRITICAL/HIGH
 1. Immediately halt the entire pipeline
 2. git revert — bulk revert to the last safe/task-{n} tag (partial revert prohibited)
-3. Immediately notify user + force Ask Mode ON
+3. Immediately notify user and wait for confirmation before resuming
 4. Auto-generate .pipeline/reports/security-report.md
 5. Re-enter Phase 3 (Planning) — not Task Manager
 6. security-constraints.md auto-included in all subsequent spawns

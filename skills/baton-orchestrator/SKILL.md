@@ -38,6 +38,11 @@ model: opus
 
 Use `scripts/score.sh` for automated calculation.
 
+## Phase Transition Policy
+- All phase transitions are **automatic** — Main proceeds immediately after a phase completes.
+- The only interactive phase is **Interview** (waits for user responses).
+- Exceptions requiring user input: Security Rollback (R04/R05), Tier 3 Planning conflicts (R10), checkpoint restore, stack detection failure (R11).
+
 ## Pipeline Overview
 
 | Tier | Flow | Details |
@@ -63,7 +68,7 @@ Use `scripts/score.sh` for automated calculation.
 - If conflicts or inconsistencies are detected during QA/Review → reported to Main → Main instructs the relevant Worker to fix → QA re-run
 
 ## Security Rollback (CRITICAL/HIGH only)
-1. Halt pipeline → 2. git revert to last safe tag → 3. Notify user + Ask Mode ON
+1. Halt pipeline → 2. git revert to last safe tag → 3. Notify user + wait for confirmation
 4. Generate security report → 5. Re-enter Planning → 6. Auto-include security-constraints.md
 
 ## Artifact Store (.baton/) → references/artifacts.md
