@@ -2,39 +2,74 @@
   "hooks": {
     "InstructionsLoaded": [
       {
-        "command": "bash hooks/scripts/on-instructions-loaded.sh"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash hooks/scripts/on-instructions-loaded.sh"
+          }
+        ]
       }
     ],
     "PreToolUse": [
       {
         "matcher": "Agent",
-        "command": "bash hooks/scripts/detect-stack.sh pre-spawn"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash hooks/scripts/detect-stack.sh pre-spawn"
+          }
+        ]
       }
     ],
     "PostToolUse": [
       {
         "matcher": "Bash",
-        "command": "bash hooks/scripts/log-event.sh post-tool"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash hooks/scripts/log-event.sh post-tool"
+          }
+        ]
       }
     ],
     "StopFailure": [
       {
-        "command": "bash hooks/scripts/on-stop-failure.sh"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash hooks/scripts/on-stop-failure.sh"
+          }
+        ]
       }
     ],
     "PostCompact": [
       {
-        "command": "bash hooks/scripts/on-post-compact.sh"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash hooks/scripts/on-post-compact.sh"
+          }
+        ]
       }
     ],
     "WorktreeCreate": [
       {
-        "command": "bash hooks/scripts/log-event.sh worktree-created"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash hooks/scripts/log-event.sh worktree-created"
+          }
+        ]
       }
     ],
     "WorktreeRemove": [
       {
-        "command": "bash hooks/scripts/log-event.sh worktree-removed"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash hooks/scripts/log-event.sh worktree-removed"
+          }
+        ]
       }
     ]
   }
