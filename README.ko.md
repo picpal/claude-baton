@@ -9,8 +9,17 @@ Claude Code용 멀티 에이전트 개발 파이프라인 플러그인.
 ## 설치
 
 ```bash
-# GitHub에서 설치
-claude plugin install github:claude-baton/claude-baton
+# 1. 마켓플레이스 추가
+/plugin marketplace add picpal/claude-baton
+
+# 2. 플러그인 설치
+/plugin install claude-baton@claude-baton
+```
+
+또는 로컬 개발용:
+
+```bash
+claude --plugin-dir /path/to/claude-baton
 ```
 
 ## 빠른 시작

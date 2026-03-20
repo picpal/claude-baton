@@ -9,8 +9,17 @@ Orchestrates the full development lifecycle — from requirements interview to s
 ## Installation
 
 ```bash
-# Install from GitHub
-claude plugin install github:claude-baton/claude-baton
+# 1. Add marketplace
+/plugin marketplace add picpal/claude-baton
+
+# 2. Install plugin
+/plugin install claude-baton@claude-baton
+```
+
+Or load locally for development:
+
+```bash
+claude --plugin-dir /path/to/claude-baton
 ```
 
 ## Quick Start
