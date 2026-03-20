@@ -28,8 +28,32 @@ Security issues are force-logged regardless of LOG_MODE setting.
 
 ## Self-Improvement Loop
 
-| Trigger | Action |
-|---------|--------|
-| User correction | Update lessons.md with the correction |
-| Session start | Review lessons.md before any work |
-| Security Rollback | Add pattern to security-constraints.md |
+### Lesson Trigger Events
+
+| Trigger | Reporter | Writer | When |
+|---------|----------|--------|------|
+| QA 3-failure escalation | qa-unit, qa-integration | Main | task status = "escalated" |
+| Code Review Critical | quality-inspector, tdd-enforcer | Main | Critical finding reported |
+| Security MEDIUM | security-guardian | Main | MEDIUM rework initiated |
+| Security Rollback | rollback command | rollback command | Rollback execution |
+| User correction | Main (self-detect) | Main | User corrects approach or decision |
+
+### lessons.md Entry Format
+
+```markdown
+---
+### L-{YYYY-MM-DD}-{seq} | {category} | {severity}
+- **trigger**: {qa-escalation|review-critical|security-medium|security-rollback|rework-success|user-correction}
+- **task**: {task-id or "session-level"}
+- **what happened**: {1-2 sentence problem description}
+- **root cause**: {1-2 sentence cause analysis}
+- **rule**: {imperative rule for future prevention}
+- **files**: {related file paths or "N/A"}
+```
+
+- **category**: `tdd`, `security`, `quality`, `integration`, `architecture`, `scope`, `process`
+- **severity**: `critical`, `high`, `medium`
+
+### LESSON_REPORT Protocol
+
+Agents report lessons by including a `LESSON_REPORT:` block in their output. Main Orchestrator is the single writer to lessons.md (except during Rollback). See each agent's `## Lesson Reporting` section for the specific report format.

@@ -29,3 +29,19 @@ Verify unit test quality for completed tasks.
 - On QA pass: no status change (Worker's "done" status is maintained)
 - On QA failure: `TaskUpdate(status: "blocked", reason: "QA failure: {reason}")`
 - After 3 consecutive failures: `TaskUpdate(status: "escalated")`
+
+## Lesson Reporting
+When a task reaches 3 consecutive failures and is escalated (`TaskUpdate(status: "escalated")`),
+include a `LESSON_REPORT:` block in your output to Main:
+
+```
+LESSON_REPORT:
+  trigger: qa-escalation
+  category: tdd
+  severity: high
+  task: {task-id}
+  what_happened: {describe what tests failed and the pattern of failures}
+  root_cause: {analyze why 3 attempts were insufficient — e.g., unclear spec, missing edge case, wrong approach}
+  rule: {imperative rule to prevent this pattern — e.g., "Always verify X before implementing Y"}
+  files: {test files and implementation files involved}
+```

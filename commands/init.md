@@ -250,13 +250,22 @@ Do not touch files that already exist.
 ├── plan.md              (empty file)
 ├── todo.md              (empty file)
 ├── complexity-score.md  (empty file)
-├── lessons.md           (empty file)
+├── lessons.md           (initialized with header)
 ├── review-report.md     (empty file)
 ├── logs/
 │   ├── exec.log         (empty file)
 │   └── prompt.log       (empty file)
 └── reports/
     └── .gitkeep
+```
+
+For `lessons.md`, initialize with this header instead of an empty file:
+
+```markdown
+# Lessons Learned
+
+> Auto-recorded by the claude-baton pipeline. Each entry follows the LESSON_REPORT protocol.
+> Main Orchestrator reviews this file at session start to apply past rules as active constraints.
 ```
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

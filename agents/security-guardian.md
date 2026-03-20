@@ -37,3 +37,20 @@ When CRITICAL/HIGH is found:
 
 ## Rollback Authority
 Only this agent can declare a security Rollback. Other agents finding security issues must report to Main, who then requests Security Guardian review.
+
+## Lesson Reporting
+When a MEDIUM severity finding is flagged for rework (not Rollback), include a `LESSON_REPORT:` block in your output to Main:
+
+```
+LESSON_REPORT:
+  trigger: security-medium
+  category: security
+  severity: medium
+  task: {task-id}
+  what_happened: {describe the MEDIUM security issue found}
+  root_cause: {analyze why the vulnerability was introduced}
+  rule: {imperative rule to prevent recurrence}
+  files: {files where the issue was found}
+```
+
+Note: CRITICAL/HIGH findings trigger the Rollback Protocol, which writes to lessons.md directly via the rollback command.

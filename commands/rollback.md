@@ -19,7 +19,17 @@ Execute a security rollback to the last safe tag.
 4. Commit: git commit -m "revert: security rollback to {safe-tag}"
 5. Generate .baton/reports/security-report.md
 6. Create/update .baton/security-constraints.md
-7. Update .baton/lessons.md
+7. Append a lesson entry to `.baton/lessons.md` in the following format:
+   ```markdown
+   ---
+   ### L-{YYYY-MM-DD}-{seq} | security | critical
+   - **trigger**: security-rollback
+   - **task**: {task-id or "session-level"}
+   - **what happened**: Security Rollback triggered — {CRITICAL or HIGH}: {brief description of finding}
+   - **root cause**: {from security-report.md analysis}
+   - **rule**: {imperative prevention rule derived from the finding}
+   - **files**: {files that contained the vulnerability}
+   ```
 8. Force Ask Mode ON
 9. Notify user
 

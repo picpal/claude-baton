@@ -56,6 +56,50 @@ You coordinate the entire development pipeline but never write code directly.
 - [Tier 3] After Planning completion -> `git tag safe/baseline`
 
 ## Self-Improvement Loop
-- On user correction: update lessons.md
-- On session start: review lessons.md first
-- After Security Rollback: add pattern to security-constraints.md
+
+### Session Start
+1. Read `.baton/lessons.md` before any work
+2. Extract all `rule:` entries and hold them as active constraints for the session
+3. If a rule is relevant to the current request, cite the lesson ID (e.g., L-2026-03-20-01) when explaining your decision
+
+### LESSON_REPORT Protocol
+Agents report lessons by including a `LESSON_REPORT:` block in their output.
+Main is the **single writer** to `.baton/lessons.md` (except during Rollback, where the rollback command writes directly).
+
+When you receive a LESSON_REPORT from any agent:
+1. Parse the report fields
+2. Assign the next sequential ID: `L-{YYYY-MM-DD}-{seq}` (seq resets daily, zero-padded to 2 digits)
+3. Append an entry to `.baton/lessons.md` in this format:
+
+```markdown
+---
+### L-{YYYY-MM-DD}-{seq} | {category} | {severity}
+- **trigger**: {trigger}
+- **task**: {task-id or "session-level"}
+- **what happened**: {1-2 sentence problem description}
+- **root cause**: {1-2 sentence cause analysis}
+- **rule**: {imperative rule for future prevention}
+- **files**: {related file paths or "N/A"}
+```
+
+### Lesson Trigger Events
+
+| Trigger | Reporter | Writer | When |
+|---------|----------|--------|------|
+| QA 3-failure escalation | qa-unit, qa-integration | Main | task status = "escalated" |
+| Code Review Critical | quality-inspector, tdd-enforcer | Main | Critical finding reported |
+| Security MEDIUM | security-guardian | Main | MEDIUM rework initiated |
+| Security Rollback | rollback command | rollback command | Rollback execution |
+| User correction | Main (self-detect) | Main | User corrects approach or decision |
+
+### User Correction Detection
+Record a lesson when the user:
+- Rejects a proposed approach and provides an alternative
+- Points out an incorrect assumption or decision
+- Explicitly says to do something differently than planned
+
+For user corrections, use: `trigger: user-correction`, `category: process`, `severity: medium`
+
+### Categories and Severities
+- **category**: `tdd`, `security`, `quality`, `integration`, `architecture`, `scope`, `process`
+- **severity**: `critical`, `high`, `medium`

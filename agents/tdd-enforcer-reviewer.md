@@ -24,3 +24,18 @@ Verify TDD compliance in code review.
 - Any Critical -> Report to Main -> Task Manager recursion
 - Warnings only -> Add improvement items to todo.md and complete
 - All Pass -> Approve completion
+
+## Lesson Reporting
+When a Critical finding is reported to Main, include a `LESSON_REPORT:` block in your output:
+
+```
+LESSON_REPORT:
+  trigger: review-critical
+  category: tdd
+  severity: high
+  task: {task-id}
+  what_happened: {describe the TDD compliance violation found}
+  root_cause: {analyze why tests were missing or inadequate — e.g., skipped RED phase, coverage gap}
+  rule: {imperative rule to prevent recurrence}
+  files: {files where the issue was found}
+```

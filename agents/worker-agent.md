@@ -48,3 +48,18 @@ The appropriate baton-tdd-{stack} skill is injected by Main at spawn time based 
 - On task start: verify the assigned task with `TaskGet`, then `TaskUpdate(status: "in_progress")`
 - On task completion: `TaskUpdate(status: "done")`
 - On scope-lock violation detected: `TaskUpdate(status: "blocked", reason: "SCOPE_EXCEED: {filename}")`
+
+## Lesson Reporting
+When a rework succeeds (you fixed an issue reported by QA or Code Review), include a `LESSON_REPORT:` block in your output to Main to record what the root cause was:
+
+```
+LESSON_REPORT:
+  trigger: rework-success
+  category: {tdd|quality|integration|security}
+  severity: medium
+  task: {task-id}
+  what_happened: {describe what was wrong and how it was fixed}
+  root_cause: {analyze the actual root cause of the original failure}
+  rule: {imperative rule to avoid this mistake in the first place}
+  files: {files that were modified during rework}
+```
