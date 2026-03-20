@@ -8,6 +8,10 @@
     ],
     "PreToolUse": [
       {
+        "matcher": "Edit|Write",
+        "hooks": [{"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/main-guard.sh"}]
+      },
+      {
         "matcher": "Agent",
         "hooks": [{"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/detect-stack.sh pre-spawn"}]
       }
