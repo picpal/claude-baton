@@ -1,3 +1,4 @@
 .pipeline/logs/
 .pipeline/reports/
 *.ko.md
+!README.ko.md

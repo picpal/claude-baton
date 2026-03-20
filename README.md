@@ -1,3 +1,5 @@
+🌐 [한국어](README.ko.md) | **English**
+
 # claude-baton
 
 Multi-agent development pipeline plugin for Claude Code.
