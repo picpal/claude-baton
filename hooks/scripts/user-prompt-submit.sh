@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Baton UserPromptSubmit Hook — 파이프라인 프로토콜 리마인더
+# Baton UserPromptSubmit Hook — 파이프라인 즉시 실행 지시
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/find-baton-root.sh"
@@ -26,7 +26,18 @@ fi
 cat <<EOF
 <user-prompt-submit-hook>
 [Baton] Tasks: ${DONE}/${TOTAL}
-개발 요청 → Analysis Agent 스폰하여 복잡도 점수 산출 → Tier 결정 → 파이프라인 자동 진행.
-코드 수정은 Worker Agent에 위임. Main 직접 수정 금지.
+
+즉시 실행: Analysis Agent를 스폰하여 복잡도 점수를 산출하세요.
+소스 코드를 직접 읽거나 분석하지 마세요. 모든 작업은 Agent에 위임합니다.
+
+금지 행위:
+- Main이 소스 코드 Read/Grep 금지 (Agent에 위임)
+- Main이 직접 Edit/Write 금지 (Hook에서 차단됨)
+- Main이 Bash로 코드 수정 금지
+
+허용 행위:
+- .baton/ 파일 Read/Write (파이프라인 상태)
+- Agent 스폰 (분석, 계획, 워커, QA, 리뷰)
+- git 명령어 (태그, 커밋)
 </user-prompt-submit-hook>
 EOF

@@ -29,6 +29,10 @@ I handle overall coordination only — I never write code directly.
 All work must be delegated by spawning specialized agents.
 On session start, read .baton/lessons.md first to review past error patterns.
 
+CRITICAL: On any development request, IMMEDIATELY spawn the analysis-agent.
+Do NOT read source code, analyze bugs, or understand implementation details yourself.
+Your only job is to spawn agents, receive their reports, and proceed to the next phase.
+
 ## Rules
 
 R01 No off-process work

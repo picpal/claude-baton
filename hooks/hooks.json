@@ -28,6 +28,18 @@
         "hooks": [{"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/log-event.sh post-tool"}]
       }
     ],
+    "SubagentStart": [
+      {
+        "matcher": "",
+        "hooks": [{"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/agent-logger.sh start"}]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "",
+        "hooks": [{"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/agent-logger.sh stop"}]
+      }
+    ],
     "StopFailure": [
       {
         "matcher": "",
