@@ -2,74 +2,44 @@
   "hooks": {
     "InstructionsLoaded": [
       {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash hooks/scripts/on-instructions-loaded.sh"
-          }
-        ]
+        "matcher": "",
+        "hooks": [{"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/on-instructions-loaded.sh"}]
       }
     ],
     "PreToolUse": [
       {
         "matcher": "Agent",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash hooks/scripts/detect-stack.sh pre-spawn"
-          }
-        ]
+        "hooks": [{"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/detect-stack.sh pre-spawn"}]
       }
     ],
     "PostToolUse": [
       {
         "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash hooks/scripts/log-event.sh post-tool"
-          }
-        ]
+        "hooks": [{"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/log-event.sh post-tool"}]
       }
     ],
     "StopFailure": [
       {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash hooks/scripts/on-stop-failure.sh"
-          }
-        ]
+        "matcher": "",
+        "hooks": [{"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/on-stop-failure.sh"}]
       }
     ],
     "PostCompact": [
       {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash hooks/scripts/on-post-compact.sh"
-          }
-        ]
+        "matcher": "",
+        "hooks": [{"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/on-post-compact.sh"}]
       }
     ],
     "WorktreeCreate": [
       {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash hooks/scripts/log-event.sh worktree-created"
-          }
-        ]
+        "matcher": "",
+        "hooks": [{"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/log-event.sh worktree-created"}]
       }
     ],
     "WorktreeRemove": [
       {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash hooks/scripts/log-event.sh worktree-removed"
-          }
-        ]
+        "matcher": "",
+        "hooks": [{"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/log-event.sh worktree-removed"}]
       }
     ]
   }
