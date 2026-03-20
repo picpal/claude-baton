@@ -1,0 +1,32 @@
+{
+  "name": "claude-baton",
+  "owner": {
+    "name": "picpal",
+    "url": "https://github.com/picpal"
+  },
+  "metadata": {
+    "description": "Multi-agent TDD pipeline orchestrator with complexity-based tier routing and security rollback"
+  },
+  "plugins": [
+    {
+      "name": "claude-baton",
+      "source": "./",
+      "description": "Multi-agent development pipeline. Orchestrates interview, analysis, planning, TDD execution, QA, and security review across 12 tech stacks.",
+      "author": {
+        "name": "picpal"
+      },
+      "homepage": "https://github.com/picpal/claude-baton",
+      "repository": "https://github.com/picpal/claude-baton",
+      "license": "MIT",
+      "keywords": [
+        "pipeline",
+        "multi-agent",
+        "tdd",
+        "orchestration",
+        "security",
+        "code-review",
+        "qa"
+      ]
+    }
+  ]
+}

@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "description": "Multi-agent development pipeline. Orchestrates interview, analysis, planning, TDD execution, QA, and security review across 12 tech stacks.",
   "author": {
-    "name": "claude-baton",
-    "url": "https://github.com/claude-baton/claude-baton"
+    "name": "picpal",
+    "url": "https://github.com/picpal"
   },
   "license": "MIT",
   "keywords": [
@@ -14,5 +14,6 @@
     "orchestration",
     "security"
   ],
-  "homepage": "https://github.com/claude-baton/claude-baton"
+  "homepage": "https://github.com/picpal/claude-baton",
+  "repository": "https://github.com/picpal/claude-baton"
 }
