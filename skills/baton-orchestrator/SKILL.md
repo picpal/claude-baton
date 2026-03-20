@@ -57,10 +57,10 @@ Use `scripts/score.sh` for automated calculation.
 - Both must pass before Code Review
 
 ## Worktree Isolation Strategy
-- Worker 에이전트는 `isolation: "worktree"` 모드로 실행
-- 각 Worker는 독립된 git worktree에서 작업하여 병렬 파일 충돌 방지
-- Worker 완료 후 Main이 결과 브랜치를 머지
-- QA/Review 단계에서 충돌·불일치 감지 → Main에 보고 → 해당 Worker에게 수정 지시 → QA 재실행
+- Worker agents run in `isolation: "worktree"` mode
+- Each Worker operates in an isolated git worktree to prevent parallel file conflicts
+- After Worker completion, Main merges the result branch
+- If conflicts or inconsistencies are detected during QA/Review → reported to Main → Main instructs the relevant Worker to fix → QA re-run
 
 ## Security Rollback (CRITICAL/HIGH only)
 1. Halt pipeline → 2. git revert to last safe tag → 3. Notify user + Ask Mode ON
@@ -70,10 +70,10 @@ Use `scripts/score.sh` for automated calculation.
 Key files: plan.md · todo.md · complexity-score.md · review-report.md · lessons.md
 
 ## Hook Events
-파이프라인은 다음 Hook 이벤트를 활용합니다:
-- **InstructionsLoaded**: CLAUDE.md 로드 시 lessons.md 자동 리뷰 트리거
-- **StopFailure**: API 에러로 에이전트 중단 시 exec.log에 자동 기록
-- **PostCompact**: 컨텍스트 압축 후 핵심 파이프라인 상태 파일 재확인
-- **WorktreeCreate/Remove**: Worker worktree 생성·제거 시 이벤트 로깅
-- **PreToolUse(Agent)**: 에이전트 스폰 전 스택 감지 트리거
-- **PostToolUse(Bash)**: Bash 명령 실행 후 이벤트 로깅
+The pipeline utilizes the following hook events:
+- **InstructionsLoaded**: Triggers automatic lessons.md review when CLAUDE.md is loaded
+- **StopFailure**: Automatically logs to exec.log when an agent stops due to API error
+- **PostCompact**: Re-verifies core pipeline state files after context compaction
+- **WorktreeCreate/Remove**: Logs events when Worker worktrees are created or removed
+- **PreToolUse(Agent)**: Triggers stack detection before agent spawn
+- **PostToolUse(Bash)**: Logs events after Bash command execution

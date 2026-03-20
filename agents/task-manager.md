@@ -39,13 +39,13 @@ Write .baton/todo.md with task format:
 ```
 
 ## Dual Tracking (todo.md + Built-in Tasks)
-Task Manager는 두 가지 시스템에 동시에 태스크를 등록합니다:
+Task Manager registers tasks in two systems simultaneously:
 
-### 1. `.baton/todo.md` (기존 — 사람이 읽기 위한 기록)
-기존 포맷 유지. 파이프라인 완료 후 리포트 용도.
+### 1. `.baton/todo.md` (Existing — Human-Readable Record)
+Maintains existing format. Used for reporting after pipeline completion.
 
-### 2. Built-in TaskCreate (자동 추적용)
-각 태스크를 `TaskCreate`로 등록하여 의존성 추적 및 상태 관리 자동화.
+### 2. Built-in TaskCreate (Automated Tracking)
+Each task is registered via `TaskCreate` to automate dependency tracking and status management.
 
 ```
 TaskCreate({
@@ -61,8 +61,8 @@ TaskCreate({
 })
 ```
 
-### 상태 동기화 규칙
-- Worker 시작 시: `TaskUpdate(id, { status: "in_progress" })`
-- Worker 완료 시: `TaskUpdate(id, { status: "done" })` + todo.md의 `[ ]` → `[x]` 업데이트
-- QA 실패 시: `TaskUpdate(id, { status: "blocked" })` + 사유 기록
-- 3회 실패 후 에스컬레이션: `TaskUpdate(id, { status: "escalated" })`
+### Status Synchronization Rules
+- On Worker start: `TaskUpdate(id, { status: "in_progress" })`
+- On Worker completion: `TaskUpdate(id, { status: "done" })` + update `[ ]` → `[x]` in todo.md
+- On QA failure: `TaskUpdate(id, { status: "blocked" })` + record reason
+- After 3 failures, escalation: `TaskUpdate(id, { status: "escalated" })`

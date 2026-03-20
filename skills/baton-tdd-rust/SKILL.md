@@ -1,8 +1,8 @@
 ---
 name: baton-tdd-rust
 description: |
-  Rust TDD 규칙 및 QA 체크리스트. cargo test, cargo-tarpaulin, cargo clippy 기반.
-  Use this skill when: Rust 프로젝트에 Cargo.toml이 있고 TDD 규칙이 필요할 때.
+  Rust TDD rules and QA checklist. Based on cargo test, cargo-tarpaulin, cargo clippy.
+  Use this skill when: TDD rules are needed for a Rust project with Cargo.toml.
   Trigger: "Rust TDD", "Rust 테스트", "cargo test 규칙", "Rust 프로젝트 테스트".
   Covers: unsafe block audit, no unwrap() policy (use expect() or ? operator).
   NOT for: Python/Go/Java/Swift projects — use the corresponding baton-tdd-{lang} skill instead.

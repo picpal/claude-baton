@@ -1,7 +1,7 @@
 ---
 name: baton-tdd-kotlin
 description: |
-  TDD rules and QA checklist for Kotlin projects (suspend 함수, data class, sealed class, coroutine, kotlinx).
+  TDD rules and QA checklist for Kotlin projects (suspend functions, data class, sealed class, coroutine, kotlinx).
   Uses MockK instead of Mockito, kotlinx-coroutines-test for coroutine testing, runTest blocks for suspend functions.
   Enforces no !! operator, sealed class exhaustiveness, and data class immutability.
   Trigger when: project has .kt source files, build.gradle.kts, or kotlin plugin in build configuration.

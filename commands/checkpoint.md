@@ -16,7 +16,7 @@ Manage named save points in your development workflow.
 Create a new checkpoint with a descriptive name.
 
 ```bash
-/baton:checkpoint save before-auth-refactor "인증 리팩터링 시작 전 상태"
+/baton:checkpoint save before-auth-refactor "State before starting auth refactor"
 ```
 
 **Steps:**
@@ -72,9 +72,9 @@ The file `.baton/checkpoints.md` is auto-generated and updated on every checkpoi
 
 | # | Name | Created | Commit | Description |
 |---|------|---------|--------|-------------|
-| 3 | after-api-complete | 2026-03-20 14:30 | a1b2c3d | API 구현 완료 |
-| 2 | before-auth-refactor | 2026-03-20 11:00 | d4e5f6a | 인증 리팩터링 시작 전 |
-| 1 | initial-setup | 2026-03-20 09:00 | 7g8h9i0 | 프로젝트 초기 설정 완료 |
+| 3 | after-api-complete | 2026-03-20 14:30 | a1b2c3d | API implementation complete |
+| 2 | before-auth-refactor | 2026-03-20 11:00 | d4e5f6a | Before starting auth refactor |
+| 1 | initial-setup | 2026-03-20 09:00 | 7g8h9i0 | Initial project setup complete |
 
 Total: 3 checkpoints
 Latest: after-api-complete (2026-03-20 14:30)

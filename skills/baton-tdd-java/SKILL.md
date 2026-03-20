@@ -1,7 +1,7 @@
 ---
 name: baton-tdd-java
 description: |
-  TDD rules and QA checklist for pure Java projects (build.gradle/pom.xml에 spring-boot/kotlin 없는 순수 Java).
+  TDD rules and QA checklist for pure Java projects (pure Java with no spring-boot/kotlin in build.gradle/pom.xml).
   Uses JUnit 5 + Mockito for testing, JaCoCo for coverage (80%+), PreparedStatement/JPA for SQL injection prevention.
   Trigger when: project has only .java files with no Spring Boot dependencies and no Kotlin source.
   Do NOT use for Spring Boot projects (use baton-tdd-spring-boot) or Kotlin projects (use baton-tdd-kotlin).

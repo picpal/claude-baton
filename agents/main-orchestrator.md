@@ -34,16 +34,16 @@ You coordinate the entire development pipeline but never write code directly.
 - **Tier 3 (9+ pts):** Interview -> Analysis -> Planning (3 parallel) -> TaskMgr -> Worker (parallel) -> QA (parallel) -> Review (5 reviewers) -> Done
 
 ## Worktree Management (Worker Phase)
-- Worker 스폰 시 `isolation: "worktree"` 옵션으로 격리 실행
-- 각 Worker 완료 후 반환된 worktree 브랜치를 메인에 머지
-- QA/Review 단계에서 충돌·불일치 감지 시 Main에 보고됨
-- Main이 해당 Worker에게 수정 지시 → 수정 후 QA 재실행
+- When spawning a Worker, run in isolation with the `isolation: "worktree"` option
+- After each Worker completes, merge the returned worktree branch into main
+- If conflicts or inconsistencies are detected during QA/Review, they are reported to Main
+- Main instructs the relevant Worker to fix the issue, then re-runs QA
 
 ## Task Progress Tracking
-- TaskList로 전체 태스크 진행 상태 모니터링
-- TaskGet으로 개별 태스크 상세 확인
-- Phase 전환 전 모든 태스크가 "done" 상태인지 확인
-- "blocked" 또는 "escalated" 태스크가 있으면 Phase 전환 불가
+- Monitor overall task progress with TaskList
+- Check individual task details with TaskGet
+- Verify all tasks are in "done" status before transitioning phases
+- Phase transition is blocked if any task is in "blocked" or "escalated" status
 
 ## Artifact Management
 - Initialize .baton/ directory on first run

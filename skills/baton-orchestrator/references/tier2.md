@@ -47,9 +47,9 @@ Interview
 - Commit on completion (draft)
 
 #### Worktree Isolation (Worker Phase)
-- 각 Worker는 `isolation: "worktree"` 옵션으로 격리된 git worktree에서 실행
-- 병렬 Worker 간 파일 충돌 방지
-- 완료 후 Main이 브랜치 머지, 충돌·불일치는 QA/Review에서 감지 후 Worker에게 수정 지시
+- Each Worker runs in an isolated git worktree with the `isolation: "worktree"` option
+- Prevents file conflicts between parallel Workers
+- After completion, Main merges the branch; conflicts or inconsistencies are detected during QA/Review and the Worker is instructed to fix them
 
 ### Phase 6: QA (Parallel)
 - Unit QA + Integration QA run simultaneously

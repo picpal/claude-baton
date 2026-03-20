@@ -39,14 +39,14 @@ Break plans into independent, testable task units. Auto-tag each task with its s
 ```
 
 ## Built-in Task Registration
-todo.md 작성과 동시에 각 태스크를 `TaskCreate`로 등록합니다.
+Each task is registered via `TaskCreate` at the same time todo.md is written.
 
-### TaskCreate 호출 규칙
-- description: "task-{id}: {description}" 형식
-- status: "todo" (초기값)
-- metadata에 stack, skill, model, files, depends 포함
-- 모든 태스크 등록 완료 후 `TaskList`로 검증
+### TaskCreate Invocation Rules
+- description: use the format "task-{id}: {description}"
+- status: "todo" (initial value)
+- metadata must include stack, skill, model, files, and depends
+- After all tasks are registered, verify with `TaskList`
 
-### 의존성 매핑
-- todo.md의 `depends: task-{id}` → TaskCreate의 metadata.depends에 동일하게 기록
-- 순환 의존성 감지 시 Main에 보고 후 대기
+### Dependency Mapping
+- `depends: task-{id}` in todo.md is recorded identically in TaskCreate's metadata.depends
+- If a circular dependency is detected, report to Main and wait

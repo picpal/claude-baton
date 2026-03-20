@@ -1,8 +1,8 @@
 ---
 name: baton-tdd-base
 description: |
-  모든 언어에 공통 적용되는 TDD 기본 원칙. RED-GREEN-REFACTOR 사이클 강제.
-  Use this skill when: 특정 언어에 국한되지 않는 일반 TDD 원칙이 필요할 때.
+  Common TDD principles applied across all languages. Enforces RED-GREEN-REFACTOR cycle.
+  Use this skill when: General TDD principles not limited to a specific language are needed.
   Trigger: "TDD 원칙", "테스트 먼저", "RED-GREEN-REFACTOR", "TDD principles", "test-first".
   This is the BASE skill — all language-specific TDD skills (Python/Go/Rust/Swift) extend this.
   For language-specific rules, use baton-tdd-{lang} instead (they auto-include this base).

@@ -1,8 +1,8 @@
 ---
 name: baton-tdd-typescript
 description: |
-  TDD skill for pure TypeScript projects — package.json에 react/next/expo 없는 순수 TS 프로젝트 전용.
-  Jest/Vitest + ts-jest, strict mode, no-any rule 적용.
+  TDD skill for pure TypeScript projects — dedicated to pure TS projects with no react/next/expo in package.json.
+  Jest/Vitest + ts-jest, strict mode, no-any rule enforced.
   NOT for React/Next.js/Expo/React Native projects — use the corresponding sister skill instead.
   Triggers when: tsconfig.json exists AND package.json has NO react, next, or expo dependency.
   Extends baton-tdd-base with TypeScript-specific frameworks, security rules, and quality checks.

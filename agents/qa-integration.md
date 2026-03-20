@@ -30,7 +30,7 @@ Verify integration quality and cross-stack contracts.
 - Beyond 3: Escalate to Main
 
 ## Task Status Update
-- QA 시작 시: 관련 태스크의 상태를 `TaskGet`으로 확인
-- QA 통과 시: 상태 변경 없음 (Worker의 "done" 유지)
-- QA 실패 시: `TaskUpdate(status: "blocked", reason: "QA 실패: {사유}")`
-- 3회 연속 실패 시: `TaskUpdate(status: "escalated")`
+- On QA start: check the related task's status with `TaskGet`
+- On QA pass: no status change (Worker's "done" status is maintained)
+- On QA failure: `TaskUpdate(status: "blocked", reason: "QA failure: {reason}")`
+- After 3 consecutive failures: `TaskUpdate(status: "escalated")`

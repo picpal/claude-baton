@@ -39,12 +39,12 @@ fix(task-{id}): {fix description}
 The appropriate baton-tdd-{stack} skill is injected by Main at spawn time based on task's stack tag.
 
 ## Worktree Isolation
-- 각 Worker는 독립된 git worktree에서 실행됨
-- 작업 완료 후 변경사항이 있으면 worktree 경로와 브랜치가 반환됨
-- 변경사항이 없으면 worktree는 자동 정리됨
-- Main이 worktree 브랜치를 머지 후, QA/Review에서 충돌·불일치가 발견되면 수정 지시를 받음
+- Each Worker runs in an isolated git worktree
+- After task completion, if there are changes, the worktree path and branch are returned
+- If there are no changes, the worktree is automatically cleaned up
+- After Main merges the worktree branch, if conflicts or inconsistencies are found during QA/Review, the Worker receives fix instructions
 
 ## Task Status Update
-- 작업 시작 시: `TaskGet`으로 할당된 태스크 확인 후 `TaskUpdate(status: "in_progress")`
-- 작업 완료 시: `TaskUpdate(status: "done")`
-- scope-lock 위반 감지 시: `TaskUpdate(status: "blocked", reason: "SCOPE_EXCEED: {filename}")`
+- On task start: verify the assigned task with `TaskGet`, then `TaskUpdate(status: "in_progress")`
+- On task completion: `TaskUpdate(status: "done")`
+- On scope-lock violation detected: `TaskUpdate(status: "blocked", reason: "SCOPE_EXCEED: {filename}")`

@@ -1,7 +1,7 @@
 ---
 name: baton-tdd-next
 description: |
-  TDD skill for Next.js framework projects — SSR/SSG, API Routes, Server/Client Components, Playwright E2E, next build 검증.
+  TDD skill for Next.js framework projects — SSR/SSG, API Routes, Server/Client Components, Playwright E2E, next build verification.
   NOT for plain React SPA (use baton-tdd-react) or React Native/Expo mobile (use their respective skills).
   Triggers when: package.json has next dependency OR next.config.js/next.config.ts exists.
   Covers NEXT_PUBLIC_ env var rules, server-only data isolation, and API Route security.

@@ -36,4 +36,4 @@ allowed-tools: Read, Bash, TaskUpdate, TaskGet
 ## Failure Handling
 - Attempts 1-3: Request fix from Worker + `TaskUpdate(status: "blocked")`
 - Beyond 3 attempts: `TaskUpdate(status: "escalated")` + Escalate to Main (request Task Manager redesign)
-- QA 통과 시: 별도 상태 변경 없음 (Worker의 "done" 유지)
+- On QA pass: no status change needed (Worker's "done" status is retained)
