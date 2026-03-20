@@ -2,3 +2,5 @@
 .pipeline/reports/
 *.ko.md
 !README.ko.md
+simulation/
+skill-benchmarks/
