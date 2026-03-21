@@ -8,8 +8,6 @@
 # - .baton/ 파일 외 코드 파일에 대한 쓰기 명령 차단
 # - 읽기 전용 명령은 허용
 
-set -e
-
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/find-baton-root.sh"
 source "$SCRIPT_DIR/stdin-reader.sh"
@@ -25,7 +23,7 @@ log() {
 
 # Subagent 실행 중인지 확인
 is_subagent_active() {
-  if [ -f "$AGENT_STACK_FILE" ] && [ -s "$AGENT_STACK_FILE" ]; then
+  if [ -f "$AGENT_STACK_FILE" ] 2>/dev/null && [ -s "$AGENT_STACK_FILE" ] 2>/dev/null; then
     return 0
   fi
   return 1
@@ -216,7 +214,7 @@ main() {
   fi
 
   local command
-  command=$(hook_get_field "tool_input.command")
+  command=$(hook_get_field "tool_input.command" 2>/dev/null || echo "")
 
   log "Checking: command=${command:0:100}"
 

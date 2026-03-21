@@ -51,7 +51,7 @@ block() {
 # -------------------------------------------------------------------
 # Get agent description from hook JSON
 # -------------------------------------------------------------------
-AGENT_DESC=$(hook_get_field "tool_input.description" 2>/dev/null)
+AGENT_DESC=$(hook_get_field "tool_input.description" 2>/dev/null || echo "")
 if [ -z "$AGENT_DESC" ]; then
   # Can't determine agent type — allow by default
   exit 0
@@ -66,16 +66,21 @@ fi
 
 # Ensure state.json exists
 if [ ! -f "$STATE_FILE" ]; then
-  state_init
+  state_init 2>/dev/null || true
 fi
 
 # -------------------------------------------------------------------
 # Read current state
 # -------------------------------------------------------------------
-TIER=$(state_get_tier)
-PHASE=$(state_get_phase)
-SECURITY_HALT=$(state_read "securityHalt")
-REWORK_ACTIVE=$(state_read "reworkStatus.active")
+TIER=$(state_get_tier 2>/dev/null || echo "")
+PHASE=$(state_get_phase 2>/dev/null || echo "")
+SECURITY_HALT=$(state_read "securityHalt" 2>/dev/null || echo "")
+REWORK_ACTIVE=$(state_read "reworkStatus.active" 2>/dev/null || echo "")
+
+# If state can't be read, allow (pre-init state)
+if [ -z "$TIER" ] && [ -z "$PHASE" ]; then
+  exit 0
+fi
 
 # -------------------------------------------------------------------
 # Global checks
@@ -91,8 +96,8 @@ if [ "$REWORK_ACTIVE" = "true" ]; then
   exit 0
 fi
 
-# If tier is null (not determined yet), only allow analysis agents
-if [ "$TIER" = "null" ]; then
+# If tier is null/empty (not determined yet), only allow analysis agents
+if [ "$TIER" = "null" ] || [ -z "$TIER" ]; then
   if [ "$AGENT_TYPE" = "analysis" ]; then
     exit 0
   else
@@ -122,14 +127,14 @@ fi
 # -------------------------------------------------------------------
 # Read phase flags
 # -------------------------------------------------------------------
-FLAG_ANALYSIS=$(state_read "phaseFlags.analysisCompleted")
-FLAG_INTERVIEW=$(state_read "phaseFlags.interviewCompleted")
-FLAG_PLANNING=$(state_read "phaseFlags.planningCompleted")
-FLAG_TASKMGR=$(state_read "phaseFlags.taskMgrCompleted")
-FLAG_WORKER=$(state_read "phaseFlags.workerCompleted")
-FLAG_QA_UNIT=$(state_read "phaseFlags.qaUnitPassed")
-FLAG_QA_INT=$(state_read "phaseFlags.qaIntegrationPassed")
-FLAG_REVIEW=$(state_read "phaseFlags.reviewCompleted")
+FLAG_ANALYSIS=$(state_read "phaseFlags.analysisCompleted" 2>/dev/null || echo "")
+FLAG_INTERVIEW=$(state_read "phaseFlags.interviewCompleted" 2>/dev/null || echo "")
+FLAG_PLANNING=$(state_read "phaseFlags.planningCompleted" 2>/dev/null || echo "")
+FLAG_TASKMGR=$(state_read "phaseFlags.taskMgrCompleted" 2>/dev/null || echo "")
+FLAG_WORKER=$(state_read "phaseFlags.workerCompleted" 2>/dev/null || echo "")
+FLAG_QA_UNIT=$(state_read "phaseFlags.qaUnitPassed" 2>/dev/null || echo "")
+FLAG_QA_INT=$(state_read "phaseFlags.qaIntegrationPassed" 2>/dev/null || echo "")
+FLAG_REVIEW=$(state_read "phaseFlags.reviewCompleted" 2>/dev/null || echo "")
 
 # -------------------------------------------------------------------
 # Build prerequisite check per agent type and tier

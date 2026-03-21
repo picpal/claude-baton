@@ -8,8 +8,6 @@
 # - Main Agent는 코드 파일을 직접 수정할 수 없음
 # - Worker Agent에게 위임해야 함
 
-set -e
-
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/find-baton-root.sh"
 source "$SCRIPT_DIR/stdin-reader.sh"
@@ -52,7 +50,7 @@ is_allowed_path() {
 
 # Subagent 실행 중인지 확인
 is_subagent_active() {
-  if [ -f "$AGENT_STACK_FILE" ] && [ -s "$AGENT_STACK_FILE" ]; then
+  if [ -f "$AGENT_STACK_FILE" ] 2>/dev/null && [ -s "$AGENT_STACK_FILE" ] 2>/dev/null; then
     return 0
   fi
   return 1
@@ -60,20 +58,21 @@ is_subagent_active() {
 
 main() {
   local file_path
-  file_path=$(hook_get_field "tool_input.file_path")
+  file_path=$(hook_get_field "tool_input.file_path" 2>/dev/null || echo "")
 
   log "Checking: file=$file_path"
-
-  # 파일 경로가 없으면 통과
-  if [ -z "$file_path" ]; then
-    log "PASSED: No file path"
-    exit 0
-  fi
 
   # .baton 디렉토리가 없으면 통과 (pre-init)
   if [ ! -d "$BATON_DIR" ]; then
     log "PASSED: Pre-init (no .baton dir)"
     exit 0
+  fi
+
+  # 파일 경로가 없으면 차단 (입력을 판별할 수 없음 → 안전을 위해 차단)
+  if [ -z "$file_path" ]; then
+    log "BLOCKED: Unable to determine file path from input"
+    echo "⛔ [Main Guard] 파일 경로를 판별할 수 없습니다. 안전을 위해 차단합니다."
+    exit 2
   fi
 
   # Subagent 실행 중이면 통과 (Worker가 실행 중)

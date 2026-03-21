@@ -9,8 +9,6 @@
 # - Tier 2/3: reviewCompleted 필요
 # - reworkStatus.active == true이면 허용
 
-set -e
-
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/find-baton-root.sh"
 source "$SCRIPT_DIR/stdin-reader.sh"
@@ -64,9 +62,15 @@ main() {
   fi
 
   local command
-  command=$(hook_get_field "tool_input.command")
+  command=$(hook_get_field "tool_input.command" || echo "")
 
   log "Checking: command=${command:0:100}"
+
+  # 명령어가 비어있으면 통과
+  if [ -z "$command" ]; then
+    log "PASSED: Empty command"
+    exit 0
+  fi
 
   # git commit이 아니면 통과
   if ! is_real_git_commit "$command"; then
@@ -78,7 +82,7 @@ main() {
 
   # Rework 상태이면 허용
   local rework_active
-  rework_active=$(state_read "reworkStatus.active")
+  rework_active=$(state_read "reworkStatus.active" || echo "")
   if [ "$rework_active" = "true" ]; then
     log "PASSED: Rework commit allowed"
     exit 0
@@ -86,18 +90,23 @@ main() {
 
   # Tier 확인
   local tier
-  tier=$(state_get_tier)
+  tier=$(state_get_tier || echo "")
 
   if [ "$tier" = "null" ] || [ -z "$tier" ]; then
-    log "PASSED: No tier set (pre-analysis)"
-    exit 0
+    log "BLOCKED: Cannot determine tier — defaulting to block for safety"
+    cat <<EOF
+⛔ [Commit Guard] Cannot determine pipeline tier — commit blocked for safety.
+
+state.json may be missing or corrupt. Ensure the pipeline is initialized.
+EOF
+    exit 2
   fi
 
   # 상태 플래그 읽기
   local qa_unit qa_integration review_completed
-  qa_unit=$(state_read "phaseFlags.qaUnitPassed")
-  qa_integration=$(state_read "phaseFlags.qaIntegrationPassed")
-  review_completed=$(state_read "phaseFlags.reviewCompleted")
+  qa_unit=$(state_read "phaseFlags.qaUnitPassed" || echo "")
+  qa_integration=$(state_read "phaseFlags.qaIntegrationPassed" || echo "")
+  review_completed=$(state_read "phaseFlags.reviewCompleted" || echo "")
 
   local qa_unit_display qa_integration_display review_display
   qa_unit_display=$( [ "$qa_unit" = "true" ] && echo "pass" || echo "pending" )

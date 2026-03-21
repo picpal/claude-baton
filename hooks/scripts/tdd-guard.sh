@@ -9,8 +9,6 @@
 # - Edit로 전체 삭제 → 차단
 # - 일반 편집/작성은 허용
 
-set -e
-
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/find-baton-root.sh"
 source "$SCRIPT_DIR/stdin-reader.sh"
@@ -96,7 +94,7 @@ main() {
   fi
 
   local file_path
-  file_path=$(hook_get_field "tool_input.file_path")
+  file_path=$(hook_get_field "tool_input.file_path" || echo "")
 
   log "Checking: tool=$HOOK_TOOL_NAME file=$file_path"
 
@@ -117,7 +115,7 @@ main() {
   # Write tool: 빈 콘텐츠 → 삭제/비우기 → 차단
   if [ "$HOOK_TOOL_NAME" = "Write" ]; then
     local content
-    content=$(hook_get_field "tool_input.content")
+    content=$(hook_get_field "tool_input.content" || echo "")
 
     if [ -z "$content" ]; then
       log "BLOCKED: Write with empty content to test file: $file_path"
@@ -132,11 +130,11 @@ main() {
   # Edit tool: new_string이 비어있고 old_string이 전체 파일인 경우 → 차단
   if [ "$HOOK_TOOL_NAME" = "Edit" ]; then
     local new_string
-    new_string=$(hook_get_field "tool_input.new_string")
+    new_string=$(hook_get_field "tool_input.new_string" || echo "")
 
     if [ -z "$new_string" ]; then
       local old_string
-      old_string=$(hook_get_field "tool_input.old_string")
+      old_string=$(hook_get_field "tool_input.old_string" || echo "")
 
       # old_string이 존재하고 new_string이 비어있으면 삭제 시도로 간주
       if [ -n "$old_string" ]; then

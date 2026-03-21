@@ -54,14 +54,23 @@ os.makedirs(os.path.dirname('$STATE_FILE'), exist_ok=True)
 with open('$STATE_FILE', 'w') as f:
     json.dump(state, f, indent=2)
     f.write('\n')
-"
+" 2>/dev/null
+  if [ $? -ne 0 ]; then
+    echo "[state-manager] state_init failed: could not write $STATE_FILE" >&2
+  fi
 }
 
 state_read() {
   local field="$1"
 
   if [ ! -f "$STATE_FILE" ]; then
-    state_init
+    state_init 2>/dev/null || true
+  fi
+
+  # If state file still doesn't exist after init attempt, return empty
+  if [ ! -f "$STATE_FILE" ]; then
+    echo ""
+    return 0
   fi
 
   python3 -c "
@@ -87,7 +96,7 @@ elif isinstance(val, (dict, list)):
     print(json.dumps(val))
 else:
     print(val)
-"
+" 2>/dev/null || echo ""
 }
 
 state_write() {
@@ -95,7 +104,13 @@ state_write() {
   local value="$2"
 
   if [ ! -f "$STATE_FILE" ]; then
-    state_init
+    state_init 2>/dev/null || true
+  fi
+
+  # If state file still doesn't exist after init attempt, log and return
+  if [ ! -f "$STATE_FILE" ]; then
+    echo "[state-manager] state_write failed: $STATE_FILE does not exist" >&2
+    return 0
   fi
 
   python3 -c "
@@ -141,7 +156,10 @@ data['timestamp'] = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 with open('$STATE_FILE', 'w') as f:
     json.dump(data, f, indent=2)
     f.write('\n')
-"
+" 2>/dev/null
+  if [ $? -ne 0 ]; then
+    echo "[state-manager] state_write failed for field: $field" >&2
+  fi
 }
 
 state_get_tier() {
@@ -159,7 +177,13 @@ state_set_phase() {
 
 state_summary() {
   if [ ! -f "$STATE_FILE" ]; then
-    state_init
+    state_init 2>/dev/null || true
+  fi
+
+  # If state file still doesn't exist, return fallback
+  if [ ! -f "$STATE_FILE" ]; then
+    echo "state: unavailable"
+    return 0
   fi
 
   python3 -c "
@@ -176,5 +200,5 @@ def flag(key):
     return 'T' if flags.get(key, False) else 'F'
 
 print(f'Tier: {tier} | Phase: {phase} | Flags: analysis={flag(\"analysisCompleted\")} planning={flag(\"planningCompleted\")} worker={flag(\"workerCompleted\")} qa={flag(\"qaUnitPassed\")} review={flag(\"reviewCompleted\")}')
-"
+" 2>/dev/null || echo "state: unavailable"
 }
