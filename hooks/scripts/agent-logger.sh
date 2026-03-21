@@ -208,10 +208,11 @@ handle_analysis_stop() {
       1)
         state_write "planningTracker.expected" "0"
         state_write "reviewTracker.expected" "0"
-        # Tier 1 skips: interview, planning, taskmgr, review
+        # Tier 1 skips: interview, planning, taskmgr, integration QA, review
         state_write "phaseFlags.interviewCompleted" "true"
         state_write "phaseFlags.planningCompleted" "true"
         state_write "phaseFlags.taskMgrCompleted" "true"
+        state_write "phaseFlags.qaIntegrationPassed" "true"
         state_write "phaseFlags.reviewCompleted" "true"
         ;;
       2)
