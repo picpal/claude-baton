@@ -69,3 +69,11 @@ Write .baton/complexity-score.md with:
 - File -> stack mapping
 - Multi-stack status
 - Complexity score breakdown and Tier
+
+## Output Marker (REQUIRED)
+At the very end of your final output to Main, you MUST include this marker on its own line:
+
+`TIER:{N}`
+
+Where {N} is the determined Tier number (1, 2, or 3).
+This marker is parsed by the pipeline automation. Do not omit it.

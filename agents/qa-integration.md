@@ -35,6 +35,15 @@ Verify integration quality and cross-stack contracts.
 - On QA failure: `TaskUpdate(status: "blocked", reason: "QA failure: {reason}")`
 - After 3 consecutive failures: `TaskUpdate(status: "escalated")`
 
+## Output Marker (REQUIRED)
+At the very end of your final output to Main, you MUST include one of these markers on its own line:
+
+- On pass: `QA_RESULT:PASS`
+- On fail: `QA_RESULT:FAIL:{brief reason}`
+- On escalation: `QA_RESULT:ESCALATED:{task-id}`
+
+This marker is parsed by the pipeline automation. Do not omit it.
+
 ## Lesson Reporting
 When a task reaches 3 consecutive failures and is escalated (`TaskUpdate(status: "escalated")`),
 include a `LESSON_REPORT:` block in your output to Main:

@@ -15,11 +15,24 @@
     "PreToolUse": [
       {
         "matcher": "Edit|Write",
-        "hooks": [{"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/main-guard.sh"}]
+        "hooks": [
+          {"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/main-guard.sh"},
+          {"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/tdd-guard.sh"}
+        ]
       },
       {
         "matcher": "Agent",
-        "hooks": [{"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/detect-stack.sh pre-spawn"}]
+        "hooks": [
+          {"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/phase-gate.sh"},
+          {"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/detect-stack.sh pre-spawn"}
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/verify-before-commit.sh"},
+          {"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/main-guard-bash.sh"}
+        ]
       }
     ],
     "PostToolUse": [

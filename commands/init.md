@@ -258,6 +258,7 @@ Do not touch files that already exist.
 ├── complexity-score.md  (empty file)
 ├── lessons.md           (initialized with header)
 ├── review-report.md     (empty file)
+├── state.json           (pipeline state machine)
 ├── logs/
 │   ├── exec.log         (empty file)
 │   └── prompt.log       (empty file)
@@ -272,6 +273,34 @@ For `lessons.md`, initialize with this header instead of an empty file:
 
 > Auto-recorded by the claude-baton pipeline. Each entry follows the LESSON_REPORT protocol.
 > Main Orchestrator reviews this file at session start to apply past rules as active constraints.
+```
+
+For `state.json`, initialize with:
+
+```json
+{
+  "version": 1,
+  "currentTier": null,
+  "currentPhase": "idle",
+  "phaseFlags": {
+    "analysisCompleted": false,
+    "interviewCompleted": false,
+    "planningCompleted": false,
+    "taskMgrCompleted": false,
+    "workerCompleted": false,
+    "qaUnitPassed": false,
+    "qaIntegrationPassed": false,
+    "reviewCompleted": false
+  },
+  "planningTracker": { "expected": 0, "completed": [] },
+  "reviewTracker": { "expected": 0, "completed": [] },
+  "workerTracker": { "expected": 0, "doneCount": 0 },
+  "qaRetryCount": {},
+  "reworkStatus": { "active": false, "attemptCount": 0 },
+  "securityHalt": false,
+  "lastSafeTag": null,
+  "timestamp": ""
+}
 ```
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -310,7 +339,7 @@ Auto-proceed: ON (only Interview phase is interactive)
 Created files:
   CLAUDE.md              — rules (R01~R12) + orchestrator instructions
   .claude/settings.json  — project-level hooks (4 events)
-  .baton/                — artifact store (7 files)
+  .baton/                — artifact store (8 files)
 
 Stack detection: auto on first development request
 No need to specify tech stacks manually.

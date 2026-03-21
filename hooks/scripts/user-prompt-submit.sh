@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# Baton UserPromptSubmit Hook — 파이프라인 즉시 실행 지시
+# Baton UserPromptSubmit Hook — Intent 분류 + 파이프라인 상태 주입
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/find-baton-root.sh"
 source "$SCRIPT_DIR/stdin-reader.sh"
+source "$SCRIPT_DIR/state-manager.sh"
 
 # .baton이 없으면 스킵
 [ -d "$BATON_DIR" ] || exit 0
@@ -23,17 +24,32 @@ if [ -f "$BATON_DIR/todo.md" ] && [ -s "$BATON_DIR/todo.md" ]; then
   DONE=$(grep -cE '^\s*-\s*\[x\]' "$BATON_DIR/todo.md" 2>/dev/null || echo "0")
 fi
 
+# state.json에서 Tier/Phase 읽기
+if [ -f "$BATON_DIR/state.json" ]; then
+  TIER=$(state_get_tier)
+  PHASE=$(state_get_phase)
+  [ "$TIER" = "null" ] && TIER="?"
+  [ -z "$PHASE" ] && PHASE="idle"
+else
+  TIER="?"
+  PHASE="idle"
+fi
+
 cat <<EOF
 <user-prompt-submit-hook>
-[Baton] Tasks: ${DONE}/${TOTAL}
+[Baton] Tier: ${TIER} | Phase: ${PHASE} | Tasks: ${DONE}/${TOTAL}
 
-즉시 실행: Analysis Agent를 스폰하여 복잡도 점수를 산출하세요.
-소스 코드를 직접 읽거나 분석하지 마세요. 모든 작업은 Agent에 위임합니다.
+Intent 분류 후 행동:
+A) NEW_TASK — 새 개발 요청 → Analysis Agent 즉시 스폰 (state를 idle로 리셋)
+B) CONTINUE — 파이프라인 재개 → 다음 대기 중 phase 진행
+C) QUERY — 질문/상태 확인 → 직접 응답 (코드 분석 제외)
+D) OVERRIDE — 사용자 수정 지시 → state 업데이트 + lesson 기록
+E) COMMAND — 슬래시 명령어 → 명령어 실행
 
 금지 행위:
 - Main이 소스 코드 Read/Grep 금지 (Agent에 위임)
 - Main이 직접 Edit/Write 금지 (Hook에서 차단됨)
-- Main이 Bash로 코드 수정 금지
+- Main이 Bash로 코드 수정 금지 (Hook에서 차단됨)
 
 허용 행위:
 - .baton/ 파일 Read/Write (파이프라인 상태)
