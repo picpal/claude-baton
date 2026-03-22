@@ -15,16 +15,33 @@ _baton_debug() {
 
 find_baton_root() {
   local dir="$PWD"
-
-  # 1. Git root with .baton
   local git_root
   git_root=$(git rev-parse --show-toplevel 2>/dev/null)
+
+  # 1. Worktree detection — MUST check before local .baton
+  #    In a worktree, .baton/ may exist (tracked files checked out)
+  #    but logs/ (gitignored) won't, so state is stale.
+  #    Always use the ORIGINAL project's .baton/ for live state.
+  local git_common_dir
+  git_common_dir=$(git rev-parse --git-common-dir 2>/dev/null)
+  if [ -n "$git_common_dir" ] && [ "$git_common_dir" != ".git" ] && [ "$git_common_dir" != "$git_root/.git" ]; then
+    # git-common-dir returns absolute path to original .git when in worktree
+    local original_root
+    original_root=$(dirname "$git_common_dir")
+    if [ -d "$original_root/.baton" ]; then
+      _baton_debug "Worktree detected — using original project: $original_root"
+      echo "$original_root"
+      return 0
+    fi
+  fi
+
+  # 2. Git root with .baton
   if [ -n "$git_root" ] && [ -d "$git_root/.baton" ]; then
     echo "$git_root"
     return 0
   fi
 
-  # 2. Upward search for .baton
+  # 3. Upward search for .baton
   local found_root=""
   while [ "$dir" != "/" ]; do
     if [ -d "$dir/.baton" ]; then
@@ -38,13 +55,13 @@ find_baton_root() {
     return 0
   fi
 
-  # 3. Fallback: Git root
+  # 4. Fallback: Git root
   if [ -n "$git_root" ]; then
     echo "$git_root"
     return 0
   fi
 
-  # 4. Final fallback: PWD
+  # 5. Final fallback: PWD
   echo "$PWD"
 }
 
