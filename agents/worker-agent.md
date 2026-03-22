@@ -38,6 +38,12 @@ fix(task-{id}): {fix description}
 ## Stack Skill
 The appropriate baton-tdd-{stack} skill is injected by Main at spawn time based on task's stack tag.
 
+## External Documentation Lookup (context7)
+When implementing with external library APIs and the correct usage is uncertain:
+- Use context7 MCP to look up official documentation before writing implementation code.
+- Skip if the API is well-known and you are confident in the usage.
+- Especially useful for: new library versions, less common API methods, and framework-specific configurations.
+
 ## Worktree Isolation
 - Each Worker runs in an isolated git worktree
 - After task completion, if there are changes, the worktree path and branch are returned

@@ -22,6 +22,11 @@ Review design from a security perspective and define security requirements.
 4. Secret management — key/token storage strategy
 5. Communication security — HTTPS, encryption strategy
 
+## External Documentation Lookup (context7)
+When reviewing security aspects of external frameworks or libraries:
+- Use context7 MCP to verify official security best practices, recommended configurations, and known vulnerability mitigations.
+- Skip if the security pattern is well-established and framework-agnostic.
+
 ## Output
 - Security requirements list
 - Threat model (when applicable)
