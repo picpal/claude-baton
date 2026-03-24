@@ -13,3 +13,4 @@ ensure_baton_dirs
 
 TIMESTAMP=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
 echo "[${TIMESTAMP}] ${EVENT}" >> "$BATON_LOG_DIR/exec.log"
+echo "[${TIMESTAMP}] ${EVENT}"

@@ -96,6 +96,25 @@ if [ "$REWORK_ACTIVE" = "true" ]; then
   exit 0
 fi
 
+# phase=done — new pipeline cycle required
+if [ "$PHASE" = "done" ]; then
+  if [ "$AGENT_TYPE" = "analysis" ]; then
+    exit 0  # Allow analysis to start new cycle
+  else
+    block "⛔ [Phase Gate] Pipeline completed (phase=done). New work requires a fresh pipeline cycle.
+
+Current state:
+  Tier: $TIER
+  Phase: $PHASE
+
+To start a new task:
+  1. State will be reset to idle
+  2. Analysis Agent must run first to determine new Tier
+
+Spawn an Analysis Agent to begin a new pipeline cycle."
+  fi
+fi
+
 # If tier is null/empty (not determined yet), only allow analysis agents
 if [ "$TIER" = "null" ] || [ -z "$TIER" ]; then
   if [ "$AGENT_TYPE" = "analysis" ]; then
