@@ -122,6 +122,30 @@ is_safe_command() {
   return 1
 }
 
+# Protected pipeline files — block WRITE operations only (reads are allowed)
+is_protected_file_write() {
+  local cmd="$1"
+  # Check if command references protected files
+  local has_protected=false
+  if echo "$cmd" | grep -q '\.agent-stack'; then
+    has_protected=true
+  elif echo "$cmd" | grep -q 'state\.json'; then
+    has_protected=true
+  fi
+
+  [ "$has_protected" = "false" ] && return 1
+
+  # Check for write patterns
+  if echo "$cmd" | grep -qE '(>>?|tee|sed\s+-i|rm\s|mv\s|cp\s|\.write\(|open\(.+[wW])'; then
+    return 0  # It's a write to a protected file
+  fi
+  # echo/printf to protected file via redirect
+  if echo "$cmd" | grep -qE '(echo|printf).*>>?\s*.*\.(agent-stack|baton.*state\.json)'; then
+    return 0
+  fi
+  return 1  # Read-only access — allow
+}
+
 # Check if command contains dangerous write patterns to non-.baton files
 is_dangerous_write() {
   local cmd="$1"
@@ -211,16 +235,12 @@ main() {
     exit 0
   fi
 
-  # Protected pipeline files — block even from subagents
+  # Protected pipeline files — block WRITE operations only (reads are allowed)
   local command_early
   command_early=$(hook_get_field "tool_input.command" 2>/dev/null || echo "")
-  if echo "$command_early" | grep -q '\.agent-stack'; then
-    log "BLOCKED: .agent-stack manipulation attempt"
-    block "⛔ [R01] .agent-stack is a protected pipeline file. Direct manipulation is not allowed."
-  fi
-  if echo "$command_early" | grep -q 'state\.json'; then
-    log "BLOCKED: state.json manipulation attempt"
-    block "⛔ [R01] state.json is a protected pipeline file. Direct manipulation is not allowed."
+  if is_protected_file_write "$command_early"; then
+    log "BLOCKED: Write to protected pipeline file"
+    block "⛔ [R01] Write to protected pipeline file detected. state.json and .agent-stack cannot be modified via Bash."
   fi
 
   # Subagent 실행 중이면 통과 (Worker가 실행 중)
