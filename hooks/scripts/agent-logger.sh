@@ -114,14 +114,18 @@ state_array_add() {
     state_init
   fi
 
-  python3 -c "
-import json, sys
+  BATON_STATE_FILE="$STATE_FILE" BATON_FIELD="$field" BATON_VALUE="$value" python3 -c "
+import json, sys, os
 from datetime import datetime, timezone
 
-with open('$STATE_FILE', 'r') as f:
+state_file = os.environ['BATON_STATE_FILE']
+field = os.environ['BATON_FIELD']
+value = os.environ['BATON_VALUE']
+
+with open(state_file, 'r') as f:
     data = json.load(f)
 
-keys = '$field'.split('.')
+keys = field.split('.')
 obj = data
 for k in keys[:-1]:
     if k not in obj or not isinstance(obj[k], dict):
@@ -132,13 +136,12 @@ last_key = keys[-1]
 if last_key not in obj or not isinstance(obj[last_key], list):
     obj[last_key] = []
 
-value = '''$value'''
 if value not in obj[last_key]:
     obj[last_key].append(value)
 
 data['timestamp'] = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 
-with open('$STATE_FILE', 'w') as f:
+with open(state_file, 'w') as f:
     json.dump(data, f, indent=2)
     f.write('\n')
 " 2>/dev/null

@@ -75,6 +75,18 @@ main() {
     exit 2
   fi
 
+  # 보호 대상 파일 차단 (subagent 여부와 무관하게 항상 차단)
+  if [[ "$file_path" == */state.json ]] && [[ "$file_path" == *.baton/* || "$file_path" == .baton/* ]]; then
+    log "DENIED: Protected pipeline file ($file_path)"
+    echo "⛔ [Main Guard] state.json and .agent-stack are protected pipeline files. Direct modification is not allowed."
+    exit 2
+  fi
+  if [[ "$file_path" == *.agent-stack* ]]; then
+    log "DENIED: Protected pipeline file ($file_path)"
+    echo "⛔ [Main Guard] state.json and .agent-stack are protected pipeline files. Direct modification is not allowed."
+    exit 2
+  fi
+
   # Subagent 실행 중이면 통과 (Worker가 실행 중)
   if is_subagent_active; then
     local active_agent

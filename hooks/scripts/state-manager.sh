@@ -23,8 +23,10 @@ state_init() {
 
   ensure_baton_dirs
 
-  python3 -c "
+  BATON_STATE_FILE="$STATE_FILE" python3 -c "
 import json, os
+
+state_file = os.environ['BATON_STATE_FILE']
 
 state = {
     'version': 1,
@@ -50,8 +52,8 @@ state = {
     'timestamp': ''
 }
 
-os.makedirs(os.path.dirname('$STATE_FILE'), exist_ok=True)
-with open('$STATE_FILE', 'w') as f:
+os.makedirs(os.path.dirname(state_file), exist_ok=True)
+with open(state_file, 'w') as f:
     json.dump(state, f, indent=2)
     f.write('\n')
 " 2>/dev/null
@@ -73,13 +75,16 @@ state_read() {
     return 0
   fi
 
-  python3 -c "
-import json, sys
+  BATON_STATE_FILE="$STATE_FILE" BATON_FIELD="$field" python3 -c "
+import json, sys, os
 
-with open('$STATE_FILE', 'r') as f:
+state_file = os.environ['BATON_STATE_FILE']
+field = os.environ['BATON_FIELD']
+
+with open(state_file, 'r') as f:
     data = json.load(f)
 
-keys = '$field'.split('.')
+keys = field.split('.')
 val = data
 for k in keys:
     if isinstance(val, dict) and k in val:
@@ -113,15 +118,18 @@ state_write() {
     return 0
   fi
 
-  python3 -c "
-import json, sys
+  BATON_STATE_FILE="$STATE_FILE" BATON_FIELD="$field" BATON_VALUE="$value" python3 -c "
+import json, sys, os
 from datetime import datetime, timezone
 
-with open('$STATE_FILE', 'r') as f:
+state_file = os.environ['BATON_STATE_FILE']
+field = os.environ['BATON_FIELD']
+value_str = os.environ['BATON_VALUE']
+
+with open(state_file, 'r') as f:
     data = json.load(f)
 
-keys = '$field'.split('.')
-value_str = '''$value'''
+keys = field.split('.')
 
 # Parse the value
 if value_str == 'true':
@@ -153,7 +161,7 @@ obj[keys[-1]] = parsed
 # Always update timestamp
 data['timestamp'] = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 
-with open('$STATE_FILE', 'w') as f:
+with open(state_file, 'w') as f:
     json.dump(data, f, indent=2)
     f.write('\n')
 " 2>/dev/null
@@ -186,10 +194,12 @@ state_summary() {
     return 0
   fi
 
-  python3 -c "
-import json
+  BATON_STATE_FILE="$STATE_FILE" python3 -c "
+import json, os
 
-with open('$STATE_FILE', 'r') as f:
+state_file = os.environ['BATON_STATE_FILE']
+
+with open(state_file, 'r') as f:
     data = json.load(f)
 
 tier = data.get('currentTier', 'null')

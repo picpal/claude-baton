@@ -21,6 +21,12 @@ log() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE"
 }
 
+block() {
+  log "BLOCKED: $1"
+  echo "$1"
+  exit 2
+}
+
 # Subagent 실행 중인지 확인
 is_subagent_active() {
   if [ -f "$AGENT_STACK_FILE" ] 2>/dev/null && [ -s "$AGENT_STACK_FILE" ] 2>/dev/null; then
@@ -205,6 +211,18 @@ main() {
     exit 0
   fi
 
+  # Protected pipeline files — block even from subagents
+  local command_early
+  command_early=$(hook_get_field "tool_input.command" 2>/dev/null || echo "")
+  if echo "$command_early" | grep -q '\.agent-stack'; then
+    log "BLOCKED: .agent-stack manipulation attempt"
+    block "⛔ [R01] .agent-stack is a protected pipeline file. Direct manipulation is not allowed."
+  fi
+  if echo "$command_early" | grep -q 'state\.json'; then
+    log "BLOCKED: state.json manipulation attempt"
+    block "⛔ [R01] state.json is a protected pipeline file. Direct manipulation is not allowed."
+  fi
+
   # Subagent 실행 중이면 통과 (Worker가 실행 중)
   if is_subagent_active; then
     local active_agent
@@ -252,8 +270,14 @@ EOF
     exit 2
   fi
 
-  log "PASSED: No dangerous patterns detected"
-  exit 0
+  local truncated="${command:0:100}"
+  log "BLOCKED: Command not in safe whitelist"
+  block "⛔ [R01] Bash command blocked — not in safe command whitelist.
+
+Blocked command: $truncated
+
+Allowed: git, ls, pwd, mkdir, cat, head, tail, wc, test runners (npm test, pytest, go test, cargo test, etc.)
+For other operations, delegate to a Worker agent."
 }
 
 main
