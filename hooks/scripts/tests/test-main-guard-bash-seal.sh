@@ -251,6 +251,39 @@ assert_allowed "5d: echo > .baton/backup-state.json (state.json exists) — .bat
 echo ""
 
 # ─────────────────────────────────────────────────
+# Test 6: False positive prevention — quoted strings must NOT trigger seals
+# ─────────────────────────────────────────────────
+echo "--- Test Group 6: Quoted string false positive prevention ---"
+
+# 6a: git commit -m "fix: state.json issue" → should NOT be blocked
+exit_code=0
+run_guard 'git commit -m "fix: state.json issue"' "" "state_exists" || exit_code=$?
+assert_allowed "6a: git commit -m 'fix: state.json issue' — quoted string must not trigger state.json seal" "$exit_code"
+
+# 6b: git commit -m "updated .agent-stack logic" → should NOT be blocked
+exit_code=0
+run_guard 'git commit -m "updated .agent-stack logic"' "" "" || exit_code=$?
+assert_allowed "6b: git commit -m 'updated .agent-stack logic' — quoted string must not trigger .agent-stack seal" "$exit_code"
+
+# 6c: echo "state.json" > /tmp/log.txt → should NOT be blocked
+#     state.json is inside quotes; actual write target is /tmp/log.txt (safe path)
+exit_code=0
+run_guard 'echo "state.json" > /tmp/log.txt' "" "state_exists" || exit_code=$?
+assert_allowed "6c: echo 'state.json' > /tmp/log.txt — quoted filename must not trigger state.json seal" "$exit_code"
+
+# 6d: echo data > .baton/state.json → should still be BLOCKED (state.json is NOT in quotes)
+exit_code=0
+run_guard 'echo data > .baton/state.json' "" "state_exists" || exit_code=$?
+assert_blocked "6d: echo data > .baton/state.json — unquoted redirect must still be BLOCKED" "$exit_code"
+
+# 6e: cat .baton/state.json → should still be ALLOWED (read, not write)
+exit_code=0
+run_guard 'cat .baton/state.json' "" "state_exists" || exit_code=$?
+assert_allowed "6e: cat .baton/state.json — read-only access must still be ALLOWED" "$exit_code"
+
+echo ""
+
+# ─────────────────────────────────────────────────
 # Summary
 # ─────────────────────────────────────────────────
 echo "=== Summary ==="

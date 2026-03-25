@@ -80,10 +80,17 @@ is_safe_command() {
     return 0
   fi
 
-  # echo/cat with redirection to .baton/ paths
+  # echo/cat with redirection to .baton/ or /tmp/ or /dev/ paths
   if [[ "$cmd" =~ ^(echo|printf|cat)[[:space:]] ]] && [[ "$cmd" =~ \>{1,2} ]]; then
     if targets_only_baton "$cmd"; then
       return 0
+    fi
+    # Allow redirects to /tmp/ and /dev/ paths (consistent with is_dangerous_write)
+    if [[ "$cmd" =~ \>{1,2}[[:space:]]*([^[:space:]|;&]+) ]]; then
+      local redir_target="${BASH_REMATCH[1]}"
+      if [[ "$redir_target" == "/tmp/"* ]] || [[ "$redir_target" == "/dev/"* ]]; then
+        return 0
+      fi
     fi
     return 1
   fi
@@ -122,13 +129,25 @@ is_safe_command() {
   return 1
 }
 
+# Remove content inside single and double quotes from a command string.
+# Used to prevent false positives when filenames appear only inside quoted arguments
+# (e.g. git commit -m "fix: state.json issue").
+# NOTE: Only use the stripped result for filename-presence detection.
+#       Write-pattern detection (redirects, etc.) must still use the original command.
+strip_quoted_strings() {
+  echo "$1" | sed -E "s/\"[^\"]*\"//g; s/'[^']*'//g"
+}
+
 # .agent-stack write detection — ALWAYS blocked, no exceptions
 is_agent_stack_write() {
   local cmd="$1"
+  local stripped
+  stripped=$(strip_quoted_strings "$cmd")
   # Does command reference .agent-stack at all? (anchored: must be at path boundary)
-  echo "$cmd" | grep -qE '(^|[[:space:]/])\.agent-stack([[:space:]]|$)' || return 1
+  # Use stripped string so quoted mentions (e.g. commit messages) are ignored.
+  echo "$stripped" | grep -qE '(^|[[:space:]/])\.agent-stack([[:space:]]|$)' || return 1
 
-  # Check for write patterns
+  # Check for write patterns using the ORIGINAL command (redirects must not be stripped)
   if echo "$cmd" | grep -qE '(>>?|tee|sed\s+-i|rm\s|mv\s|cp\s|\.write\(|open\(.+[wW])'; then
     return 0
   fi
@@ -141,10 +160,13 @@ is_agent_stack_write() {
 # state.json write detection — blocked only if state.json already exists (allow init)
 is_state_json_write() {
   local cmd="$1"
+  local stripped
+  stripped=$(strip_quoted_strings "$cmd")
   # Does command reference state.json at all? (anchored: must be at path boundary)
-  echo "$cmd" | grep -qE '(^|[[:space:]/])state\.json([[:space:]]|$|["\x27])' || return 1
+  # Use stripped string so quoted mentions (e.g. commit messages) are ignored.
+  echo "$stripped" | grep -qE '(^|[[:space:]/])state\.json([[:space:]]|$|["\x27])' || return 1
 
-  # Check for write patterns
+  # Check for write patterns using the ORIGINAL command (redirects must not be stripped)
   local is_write=false
   if echo "$cmd" | grep -qE '(>>?|tee|sed\s+-i|rm\s|mv\s|cp\s|\.write\(|open\(.+[wW])'; then
     is_write=true
