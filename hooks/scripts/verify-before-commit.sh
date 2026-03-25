@@ -92,7 +92,17 @@ main() {
   local tier
   tier=$(state_get_tier || echo "")
 
-  if [ "$tier" = "null" ] || [ -z "$tier" ]; then
+  # Init-phase exemption: tier=null/0 means no pipeline has been started yet.
+  # Allow commits during baton:init (state.json created but pipeline not yet assigned a tier).
+  # Security note: this check is intentionally gated on tier being null/0 —
+  # setting phase=idle alone cannot bypass the gate if a real tier is already assigned.
+  if [ "$tier" = "null" ] || [ -z "$tier" ] || [ "$tier" = "0" ]; then
+    local phase
+    phase=$(state_get_phase || echo "")
+    if [ "$phase" = "idle" ] || [ "$phase" = "null" ] || [ -z "$phase" ]; then
+      log "PASSED: Init-phase exemption (tier=$tier, phase=$phase) — pipeline not yet started"
+      exit 0
+    fi
     log "BLOCKED: Cannot determine tier — defaulting to block for safety"
     cat <<EOF
 ⛔ [Commit Guard] Cannot determine pipeline tier — commit blocked for safety.
