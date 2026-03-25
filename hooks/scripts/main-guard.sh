@@ -76,15 +76,24 @@ main() {
   fi
 
   # 보호 대상 파일 차단 (subagent 여부와 무관하게 항상 차단)
-  if [[ "$file_path" == */state.json ]] && [[ "$file_path" == *.baton/* || "$file_path" == .baton/* ]]; then
+
+  # .agent-stack — always block
+  if echo "$file_path" | grep -qE '(^|/)\.agent-stack$'; then
     log "DENIED: Protected pipeline file ($file_path)"
-    echo "⛔ [Main Guard] state.json and .agent-stack are protected pipeline files. Direct modification is not allowed."
-    exit 2
+    echo "⛔ [Main Guard] .agent-stack is a protected pipeline file. Direct modification is not allowed."
+    exit 1
   fi
-  if [[ "$file_path" == *.agent-stack* ]]; then
-    log "DENIED: Protected pipeline file ($file_path)"
-    echo "⛔ [Main Guard] state.json and .agent-stack are protected pipeline files. Direct modification is not allowed."
-    exit 2
+
+  # state.json — self-sealing: allow first creation, block after
+  if echo "$file_path" | grep -qE '(^|/)state\.json$'; then
+    STATE_FILE="$BATON_DIR/state.json"
+    if [ -f "$STATE_FILE" ]; then
+      log "DENIED: Protected pipeline file (sealed): $file_path"
+      echo "⛔ [Main Guard] state.json is sealed (already exists). Direct modification is not allowed."
+      exit 1
+    fi
+    log "PASSED: state.json init creation allowed (file does not exist yet)"
+    exit 0
   fi
 
   # Subagent 실행 중이면 통과 (Worker가 실행 중)

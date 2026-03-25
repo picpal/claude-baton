@@ -122,28 +122,45 @@ is_safe_command() {
   return 1
 }
 
-# Protected pipeline files — block WRITE operations only (reads are allowed)
-is_protected_file_write() {
+# .agent-stack write detection — ALWAYS blocked, no exceptions
+is_agent_stack_write() {
   local cmd="$1"
-  # Check if command references protected files
-  local has_protected=false
-  if echo "$cmd" | grep -q '\.agent-stack'; then
-    has_protected=true
-  elif echo "$cmd" | grep -q 'state\.json'; then
-    has_protected=true
-  fi
-
-  [ "$has_protected" = "false" ] && return 1
+  # Does command reference .agent-stack at all? (anchored: must be at path boundary)
+  echo "$cmd" | grep -qE '(^|[[:space:]/])\.agent-stack([[:space:]]|$)' || return 1
 
   # Check for write patterns
   if echo "$cmd" | grep -qE '(>>?|tee|sed\s+-i|rm\s|mv\s|cp\s|\.write\(|open\(.+[wW])'; then
-    return 0  # It's a write to a protected file
+    return 0
   fi
-  # echo/printf to protected file via redirect
-  if echo "$cmd" | grep -qE '(echo|printf).*>>?\s*.*\.(agent-stack|baton.*state\.json)'; then
+  if echo "$cmd" | grep -qE '(echo|printf).*>>?\s*.*\.agent-stack'; then
     return 0
   fi
   return 1  # Read-only access — allow
+}
+
+# state.json write detection — blocked only if state.json already exists (allow init)
+is_state_json_write() {
+  local cmd="$1"
+  # Does command reference state.json at all? (anchored: must be at path boundary)
+  echo "$cmd" | grep -qE '(^|[[:space:]/])state\.json([[:space:]]|$|["\x27])' || return 1
+
+  # Check for write patterns
+  local is_write=false
+  if echo "$cmd" | grep -qE '(>>?|tee|sed\s+-i|rm\s|mv\s|cp\s|\.write\(|open\(.+[wW])'; then
+    is_write=true
+  fi
+  if echo "$cmd" | grep -qE '(echo|printf).*>>?\s*.*state\.json'; then
+    is_write=true
+  fi
+
+  [ "$is_write" = "false" ] && return 1  # Read-only access — allow
+
+  # Self-sealing: block only if state.json already exists
+  if [ -f "$BATON_DIR/state.json" ]; then
+    return 0  # EXISTS → block write
+  fi
+
+  return 1  # NOT EXISTS → allow init write
 }
 
 # Check if command contains dangerous write patterns to non-.baton files
@@ -235,15 +252,16 @@ main() {
     exit 0
   fi
 
-  # Protected pipeline files — block WRITE operations only (reads are allowed)
-  local command_early
-  command_early=$(hook_get_field "tool_input.command" 2>/dev/null || echo "")
-  if is_protected_file_write "$command_early"; then
-    log "BLOCKED: Write to protected pipeline file"
-    block "⛔ [R01] Write to protected pipeline file detected. state.json and .agent-stack cannot be modified via Bash."
+  local command
+  command=$(hook_get_field "tool_input.command" 2>/dev/null || echo "")
+
+  # ── 1. .agent-stack write → BLOCK (always, for everyone) ──
+  if is_agent_stack_write "$command"; then
+    log "BLOCKED: Write to .agent-stack"
+    block "⛔ [R01] Write to .agent-stack is permanently sealed. No agent may modify .agent-stack via Bash."
   fi
 
-  # Subagent 실행 중이면 통과 (Worker가 실행 중)
+  # ── 2. Subagent active → ALLOW (Worker bypass) ──
   if is_subagent_active; then
     local active_agent
     active_agent=$(tail -1 "$AGENT_STACK_FILE" 2>/dev/null | cut -d'|' -f2 || echo "unknown")
@@ -251,8 +269,11 @@ main() {
     exit 0
   fi
 
-  local command
-  command=$(hook_get_field "tool_input.command" 2>/dev/null || echo "")
+  # ── 3. state.json write → EXISTS → BLOCK / NOT EXISTS → ALLOW ──
+  if is_state_json_write "$command"; then
+    log "BLOCKED: Write to state.json (file already exists)"
+    block "⛔ [R01] state.json is sealed after initialization. Cannot be modified via Bash."
+  fi
 
   log "Checking: command=${command:0:100}"
 
