@@ -5,17 +5,25 @@ Score 4–8 pts. Multi-file changes with moderate complexity.
 
 ## Pipeline Flow
 ```
-Interview
-  → Analysis (with stack detection)
-    → Planning (single planner)
-      → Task Manager (split & assign)
-        → Workers (parallel)
-          → QA (Unit + Integration, parallel)
-            → Code Review (3 reviewers)
-              → Done
+Issue Registration
+  → Interview
+    → Analysis (with stack detection)
+      → Planning (single planner)
+        → Task Manager (split & assign)
+          → Workers (parallel)
+            → QA (Unit + Integration, parallel)
+              → Code Review (3 reviewers)
+                → Done
 ```
 
 ## Phase Details
+
+### Phase 0: Issue Registration
+- Main Orchestrator invokes baton-issue-register skill
+- Auto-create GitHub Issue or link existing one (#N)
+- Auto-label based on request keywords (bug, enhancement, refactor, documentation)
+- Record in .baton/issue.md and state.json
+- If gh CLI unavailable: graceful skip, pipeline continues
 
 ### Phase 1: Interview
 - Clarify ambiguous requirements with user

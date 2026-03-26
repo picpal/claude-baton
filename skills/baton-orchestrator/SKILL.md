@@ -48,8 +48,8 @@ Use `scripts/score.sh` for automated calculation.
 | Tier | Flow | Details |
 |------|------|---------|
 | Tier 1 (Light) | Analysis → Worker → Unit QA → Done | references/tier1.md |
-| Tier 2 (Standard) | Interview → Analysis → Planning → TaskMgr → Workers → QA → Review(3) → Done | references/tier2.md |
-| Tier 3 (Full) | Interview → Analysis → Planning(3) → TaskMgr → Workers → QA → Review(5) → Done | references/tier3.md |
+| Tier 2 (Standard) | Issue Registration → Interview → Analysis → Planning → TaskMgr → Workers → QA → Review(3) → Done | references/tier2.md |
+| Tier 3 (Full) | Issue Registration → Interview → Analysis → Planning(3) → TaskMgr → Workers → QA → Review(5) → Done | references/tier3.md |
 
 ## Worker Model Assignment
 - **sonnet**: files ≤3, no dependencies, no architectural decisions

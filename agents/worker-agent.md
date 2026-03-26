@@ -24,6 +24,14 @@ Execute assigned tasks following strict TDD principles.
 - If out-of-scope modification needed: STOP -> report "SCOPE_EXCEED: {filename}" to Main -> wait
 
 ## Commit Format
+Before committing, check `.baton/issue.md` for issue number.
+If an issue number exists, append `(#N)` to every commit message.
+```
+feat(task-{id}): {summary} (#N)
+test(task-{id}): {test description} (#N)
+fix(task-{id}): {fix description} (#N)
+```
+If `.baton/issue.md` does not exist or has no issue number, omit the reference:
 ```
 feat(task-{id}): {summary}
 test(task-{id}): {test description}

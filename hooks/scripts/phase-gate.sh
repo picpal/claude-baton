@@ -154,6 +154,7 @@ FLAG_WORKER=$(state_read "phaseFlags.workerCompleted" 2>/dev/null || echo "")
 FLAG_QA_UNIT=$(state_read "phaseFlags.qaUnitPassed" 2>/dev/null || echo "")
 FLAG_QA_INT=$(state_read "phaseFlags.qaIntegrationPassed" 2>/dev/null || echo "")
 FLAG_REVIEW=$(state_read "phaseFlags.reviewCompleted" 2>/dev/null || echo "")
+FLAG_ISSUE=$(state_read "phaseFlags.issueRegistered" 2>/dev/null || echo "")
 
 # -------------------------------------------------------------------
 # Build prerequisite check per agent type and tier
@@ -170,8 +171,11 @@ check_prerequisites() {
       ;;
 
     interview)
-      # Tier 2/3: no prerequisites (interview comes early)
-      return 0
+      # Tier 2/3: requires issueRegistered (Phase 0)
+      if [ "$TIER" != "1" ] && [ "$FLAG_ISSUE" != "true" ]; then
+        missing="issueRegistered"
+        prereq_lines="  - issueRegistered: $FLAG_ISSUE"
+      fi
       ;;
 
     planning)

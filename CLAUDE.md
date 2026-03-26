@@ -36,11 +36,11 @@ Analysis (lightweight + stack detection) → Worker direct → Unit QA → Done
 Skipped: Interview, Planning, Task Manager, Code Review
 
 **Tier 2 — Standard**
-Interview → Analysis (with stack detection) → Planning (single) → TaskMgr → Worker (parallel) → QA (parallel) → Review (3 reviewers) → Done
+Issue Registration → Interview → Analysis (with stack detection) → Planning (single) → TaskMgr → Worker (parallel) → QA (parallel) → Review (3 reviewers) → Done
 3 Reviewers: Security Guardian · Quality Inspector · TDD Enforcer
 
 **Tier 3 — Full**
-Interview → Analysis (with stack detection) → Planning (3 parallel) → TaskMgr → Worker (parallel) → QA (parallel) → Review (5 reviewers) → Done
+Issue Registration → Interview → Analysis (with stack detection) → Planning (3 parallel) → TaskMgr → Worker (parallel) → QA (parallel) → Review (5 reviewers) → Done
 3 Planners: Security Architect + System Architect + Dev Lead
 Tier 3 specifics: safe/baseline tag auto-created
 
@@ -90,6 +90,7 @@ Security issues are force-logged regardless of LOG_MODE.
 
 ## Shared Artifact Store (.pipeline/)
 plan.md                 — Design document
+issue.md                — GitHub Issue tracking (number, URL, labels)
 todo.md                 — Task list + progress status + stack tags (auto)
 complexity-score.md     — Score + Tier + detected stack mapping
 security-constraints.md — Security constraints (created after Rollback)

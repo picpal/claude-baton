@@ -7,6 +7,7 @@ All pipeline artifacts are stored in `.baton/` at the project root.
 | File | Created By | Purpose |
 |------|-----------|---------|
 | `plan.md` | Planning phase | Design document with architecture decisions |
+| `issue.md` | Issue Registration (Phase 0) | GitHub Issue tracking — number, URL, labels, creation timestamp |
 | `todo.md` | Task Manager | Task list with progress, stack tags, assignments |
 | `complexity-score.md` | Analysis phase | Complexity score + Tier + detected stack mapping |
 | `security-constraints.md` | Security Rollback | Security constraints (created only after Rollback) |

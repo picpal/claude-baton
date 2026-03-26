@@ -40,7 +40,8 @@ state = {
         'workerCompleted': False,
         'qaUnitPassed': False,
         'qaIntegrationPassed': False,
-        'reviewCompleted': False
+        'reviewCompleted': False,
+        'issueRegistered': False
     },
     'planningTracker': { 'expected': 0, 'completed': [] },
     'reviewTracker': { 'expected': 0, 'completed': [] },
@@ -49,6 +50,10 @@ state = {
     'reworkStatus': { 'active': False, 'attemptCount': 0 },
     'securityHalt': False,
     'lastSafeTag': None,
+    'issueNumber': None,
+    'issueUrl': None,
+    'issueLabels': [],
+    'isExistingIssue': False,
     'timestamp': ''
 }
 
@@ -209,6 +214,8 @@ flags = data.get('phaseFlags', {})
 def flag(key):
     return 'T' if flags.get(key, False) else 'F'
 
-print(f'Tier: {tier} | Phase: {phase} | Flags: analysis={flag(\"analysisCompleted\")} planning={flag(\"planningCompleted\")} worker={flag(\"workerCompleted\")} qa={flag(\"qaUnitPassed\")} review={flag(\"reviewCompleted\")}')
+issue = data.get('issueNumber', None)
+issue_str = f'#{issue}' if issue else 'none'
+print(f'Tier: {tier} | Phase: {phase} | Issue: {issue_str} | Flags: analysis={flag(\"analysisCompleted\")} planning={flag(\"planningCompleted\")} worker={flag(\"workerCompleted\")} qa={flag(\"qaUnitPassed\")} review={flag(\"reviewCompleted\")}')
 " 2>/dev/null || echo "state: unavailable"
 }

@@ -43,6 +43,10 @@ git log --oneline -5
 
 When no `-m` argument is provided:
 
+0. **Issue reference**: Check if `.baton/issue.md` exists and contains an issue number.
+   If yes, append ` (#N)` to the final commit message.
+   Format: `type: 한국어 설명 (#123)`
+
 1. Analyze the staged diff (`git diff --cached`) to determine the change type:
    - `feat`: new feature or capability
    - `fix`: bug fix

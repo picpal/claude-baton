@@ -5,20 +5,28 @@ Score 9+ pts. High-complexity changes involving security, architecture, or cross
 
 ## Pipeline Flow
 ```
-Interview
-  → Analysis (with stack detection)
-    → Planning (3 parallel planners)
-      → Task Manager (split & assign)
-        → Workers (parallel)
-          → QA (Unit + Integration, parallel)
-            → Code Review (5 reviewers)
-              → Done
+Issue Registration
+  → Interview
+    → Analysis (with stack detection)
+      → Planning (3 parallel planners)
+        → Task Manager (split & assign)
+          → Workers (parallel)
+            → QA (Unit + Integration, parallel)
+              → Code Review (5 reviewers)
+                → Done
 ```
 
 ## Tier 3-Specific Rules
 - **Auto-proceed**: Phases transition automatically, same as other tiers. Only Interview is interactive.
 - **safe/baseline tag**: Created immediately after Planning completion
 - **All workers default to opus model** unless explicitly downgraded
+
+### Phase 0: Issue Registration
+- Main Orchestrator invokes baton-issue-register skill
+- Auto-create GitHub Issue or link existing one (#N)
+- Auto-label based on request keywords (bug, enhancement, refactor, documentation)
+- Record in .baton/issue.md and state.json
+- If gh CLI unavailable: graceful skip, pipeline continues
 
 ## Phase 3: Planning (3 Parallel Planners)
 
