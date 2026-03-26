@@ -43,12 +43,6 @@ When implementing with external library APIs and the correct usage is uncertain:
 - Skip if the API is well-known and you are confident in the usage.
 - Especially useful for: new library versions, less common API methods, and framework-specific configurations.
 
-## Worktree Isolation
-- Each Worker runs in an isolated git worktree
-- After task completion, if there are changes, the worktree path and branch are returned
-- If there are no changes, the worktree is automatically cleaned up
-- After Main merges the worktree branch, if conflicts or inconsistencies are found during QA/Review, the Worker receives fix instructions
-
 ## Task Status Update
 - On task start: verify the assigned task with `TaskGet`, then `TaskUpdate(status: "in_progress")`
 - On task completion: `TaskUpdate(status: "done")`

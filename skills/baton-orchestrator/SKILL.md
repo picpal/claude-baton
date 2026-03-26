@@ -4,7 +4,7 @@ description: |
   Use this skill when the user wants to build, implement, or change code that touches multiple
   concerns — features, bug fixes, refactoring, migrations, integrations, middleware, auth flows,
   payment systems, package restructuring, or API development. Acts as a project orchestrator:
-  scores complexity, enforces TDD, spawns parallel coding agents in isolated worktrees, runs QA,
+  scores complexity, enforces TDD, spawns parallel coding agents, runs QA,
   and coordinates code review. Essential for any development task where code will be written or
   modified across one or more files.
   기능 구현, 버그 수정, 리팩토링, 마이그레이션, API 개발 등 코드를 작성하거나 수정하는 개발 작업에 사용하세요.
@@ -73,6 +73,5 @@ The pipeline utilizes the following hook events:
 - **InstructionsLoaded**: Triggers automatic lessons.md review when CLAUDE.md is loaded
 - **StopFailure**: Automatically logs to exec.log when an agent stops due to API error
 - **PostCompact**: Re-verifies core pipeline state files after context compaction
-- **WorktreeCreate/Remove**: Logs events when Worker worktrees are created or removed
 - **PreToolUse(Agent)**: Triggers stack detection before agent spawn
 - **PostToolUse(Bash)**: Logs events after Bash command execution
