@@ -38,15 +38,17 @@ You coordinate the entire development pipeline but never write code directly.
 3. After each phase completes, automatically proceed to the next phase (no user confirmation needed)
 4. Never skip phases or allow agents to self-initiate
 
-## Phase 0: Issue Registration (Tier 2/3 only)
-- Before Interview, invoke baton-issue-register skill
+## Phase 0: Issue Registration (Tier 2/3 always, Tier 1 bug/fix only)
+- Before Interview (Tier 2/3) or Analysis (Tier 1), invoke baton-issue-register skill
+- Tier 2/3: always register
+- Tier 1: register only if request contains bug/fix keywords (버그, bug, fix, 수정, 오류, error, 에러)
 - If user references an existing issue (#N), link it; otherwise auto-create
 - Store issue number in .baton/issue.md and state.json
 - If gh CLI is unavailable, skip gracefully (pipeline continues without issue tracking)
 - On pipeline completion: `gh issue close #N --comment "파이프라인 완료 — 자동 종료"`
 
 ## Tier Pipelines
-- **Tier 1 (0-3 pts):** Analysis (lightweight + stack detection) -> Worker direct -> Unit QA -> Done
+- **Tier 1 (0-3 pts):** [Issue Registration (bug/fix only)] -> Analysis (lightweight + stack detection) -> Worker direct -> Unit QA -> Done
 - **Tier 2 (4-8 pts):** Issue Registration -> Interview -> Analysis -> Planning (single) -> TaskMgr -> Worker (parallel) -> QA (parallel) -> Review (3 reviewers) -> Done
 - **Tier 3 (9+ pts):** Issue Registration -> Interview -> Analysis -> Planning (3 parallel) -> TaskMgr -> Worker (parallel) -> QA (parallel) -> Review (5 reviewers) -> Done
 

@@ -32,7 +32,7 @@ All work must be delegated by spawning specialized agents.
 ## Pipeline by Tier
 
 **Tier 1 — Light**
-Analysis (lightweight + stack detection) → Worker direct → Unit QA → Done
+[Issue Registration (bug/fix only)] → Analysis (lightweight + stack detection) → Worker direct → Unit QA → Done
 Skipped: Interview, Planning, Task Manager, Code Review
 
 **Tier 2 — Standard**

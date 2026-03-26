@@ -3,12 +3,20 @@
 ## When to Use
 Score 0–3 pts. Simple, isolated changes with minimal risk.
 
+## Phase 0: Issue Registration (bug/fix only)
+- Triggered only when request contains bug/fix keywords (버그, bug, fix, 수정, 오류, error, 에러)
+- Auto-create GitHub Issue or link existing one (#N)
+- Auto-label as `bug`
+- Record in .baton/issue.md and state.json
+- If not a bug/fix request, this phase is skipped entirely
+
 ## Pipeline Flow
 ```
-Analysis (lightweight + stack detection)
-  → Worker (single)
-    → Unit QA
-      → Done
+[Issue Registration (bug/fix only)]
+  → Analysis (lightweight + stack detection)
+    → Worker (single, TDD enforced)
+      → Unit QA (80%+ coverage)
+        → Done
 ```
 
 ## Skipped Phases

@@ -1,19 +1,19 @@
 ---
 name: baton-issue-register
 description: |-
-  Register or link a GitHub Issue at pipeline start (Tier 2+ only).
+  Register or link a GitHub Issue at pipeline start. Tier 2/3: always. Tier 1: bug/fix requests only.
   Auto-creates a new issue when no existing issue is referenced,
   or links an existing issue when the user references one (e.g., #123).
   Auto-labels based on request type (bug, feature, refactor).
-  Triggered by Main Orchestrator as Phase 0 before Interview.
+  Triggered by Main Orchestrator as Phase 0 before Interview (Tier 2/3) or Analysis (Tier 1).
   이슈 등록, GitHub 이슈 생성, 이슈 연결, #123 해결해줘.
 allowed-tools: Read, Write, Bash
 model: sonnet
 ---
 
-# Issue Registration — Phase 0
+# Issue Registration — Phase 0 (Tier 2/3 always, Tier 1 bug/fix only)
 
-Register or link a GitHub Issue for pipeline traceability (Tier 2+ only).
+Register or link a GitHub Issue for pipeline traceability. Tier 2/3: always. Tier 1: bug/fix requests only.
 
 ## Pre-flight Checks
 
@@ -40,6 +40,13 @@ Parse the user's original request for issue references:
 | (default) | `enhancement` |
 
 Scan the user's request text for these keywords. Use the first match found.
+
+## Tier 1 Condition
+For Tier 1 requests, Phase 0 is only triggered when the request matches bug/fix keywords:
+- Korean: 버그, 수정, 오류, 에러
+- English: bug, fix, error
+
+If the request does not match these keywords in Tier 1, skip Phase 0 entirely.
 
 ## Issue Creation
 
