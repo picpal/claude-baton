@@ -65,8 +65,8 @@ is_safe_command() {
   fi
 
   # Directory/navigation commands
-  if [[ "$cmd" =~ ^(mkdir|ls|pwd|cd|tree|which|type|command|where|file|stat|wc|du|df)[[:space:]] ]] || \
-     [[ "$cmd" =~ ^(mkdir|ls|pwd|cd|tree|which|type|command|where|file|stat|wc|du|df)$ ]]; then
+  if [[ "$cmd" =~ ^(mkdir|touch|ls|pwd|cd|tree|which|type|command|where|file|stat|wc|du|df)[[:space:]] ]] || \
+     [[ "$cmd" =~ ^(mkdir|touch|ls|pwd|cd|tree|which|type|command|where|file|stat|wc|du|df)$ ]]; then
     return 0
   fi
 
