@@ -279,6 +279,80 @@ rm -rf "$TEST_ROOT"
 echo ""
 
 # ─────────────────────────────────────────────────
+# Test Group 7: Subagent active → commit ALLOWED (Worker checkpoint)
+# ─────────────────────────────────────────────────
+echo "--- Test Group 7: Subagent active → ALLOWED (Worker checkpoint) ---"
+
+# Helper: run hook with an agent-stack file present
+run_hook_with_agent() {
+  local baton_root="$1"
+  local agent_name="${2:-worker-1}"
+  local baton_dir="$baton_root/.baton"
+  local agent_stack_file="$baton_dir/logs/.agent-stack"
+  mkdir -p "$baton_dir/logs"
+  echo "2024-01-01T00:00:00|$agent_name" > "$agent_stack_file"
+  local exit_code=0
+  local json
+  json=$(make_commit_json)
+  echo "$json" | BATON_ROOT="$baton_root" bash "$HOOK_SCRIPT" > /dev/null 2>&1 || exit_code=$?
+  return $exit_code
+}
+
+# Helper: run hook with NO agent-stack file (ensure it's absent)
+run_hook_no_agent() {
+  local baton_root="$1"
+  local baton_dir="$baton_root/.baton"
+  rm -f "$baton_dir/logs/.agent-stack"
+  local exit_code=0
+  local json
+  json=$(make_commit_json)
+  echo "$json" | BATON_ROOT="$baton_root" bash "$HOOK_SCRIPT" > /dev/null 2>&1 || exit_code=$?
+  return $exit_code
+}
+
+# 7a: Subagent active + Tier 2 + reviewCompleted=false → ALLOWED (Worker checkpoint)
+TEST_ROOT=$(mktemp -d)
+TEST_BATON="$TEST_ROOT/.baton"
+mkdir -p "$TEST_BATON/logs"
+write_state "$TEST_BATON" "2" "worker" "true" "false"
+exit_code=0
+run_hook_with_agent "$TEST_ROOT" "worker-1" || exit_code=$?
+assert_allowed "7a: subagent active + tier=2 + reviewCompleted=false → ALLOWED (Worker checkpoint)" "$exit_code"
+rm -rf "$TEST_ROOT"
+
+# 7b: Subagent active + Tier 1 + qaUnitPassed=false → ALLOWED (Worker checkpoint)
+TEST_ROOT=$(mktemp -d)
+TEST_BATON="$TEST_ROOT/.baton"
+mkdir -p "$TEST_BATON/logs"
+write_state "$TEST_BATON" "1" "worker" "false" "false"
+exit_code=0
+run_hook_with_agent "$TEST_ROOT" "worker-2" || exit_code=$?
+assert_allowed "7b: subagent active + tier=1 + qaUnitPassed=false → ALLOWED (Worker checkpoint)" "$exit_code"
+rm -rf "$TEST_ROOT"
+
+# 7c: No subagent + Tier 2 + reviewCompleted=false → BLOCKED (Main can't bypass)
+TEST_ROOT=$(mktemp -d)
+TEST_BATON="$TEST_ROOT/.baton"
+mkdir -p "$TEST_BATON/logs"
+write_state "$TEST_BATON" "2" "worker" "true" "false"
+exit_code=0
+run_hook_no_agent "$TEST_ROOT" || exit_code=$?
+assert_blocked "7c: no subagent + tier=2 + reviewCompleted=false → BLOCKED (Main can't bypass)" "$exit_code"
+rm -rf "$TEST_ROOT"
+
+# 7d: No subagent + Tier 1 + qaUnitPassed=false → BLOCKED (Main can't bypass)
+TEST_ROOT=$(mktemp -d)
+TEST_BATON="$TEST_ROOT/.baton"
+mkdir -p "$TEST_BATON/logs"
+write_state "$TEST_BATON" "1" "worker" "false" "false"
+exit_code=0
+run_hook_no_agent "$TEST_ROOT" || exit_code=$?
+assert_blocked "7d: no subagent + tier=1 + qaUnitPassed=false → BLOCKED (Main can't bypass)" "$exit_code"
+rm -rf "$TEST_ROOT"
+
+echo ""
+
+# ─────────────────────────────────────────────────
 # Summary
 # ─────────────────────────────────────────────────
 echo "=== Summary ==="

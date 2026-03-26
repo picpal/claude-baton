@@ -88,6 +88,15 @@ main() {
     exit 0
   fi
 
+  # Subagent (Worker) 커밋은 항상 허용 — safe 태그용 체크포인트 커밋에 필요
+  AGENT_STACK_FILE="$BATON_DIR/logs/.agent-stack"
+  if [ -f "$AGENT_STACK_FILE" ] && [ -s "$AGENT_STACK_FILE" ]; then
+    local active_agent
+    active_agent=$(tail -1 "$AGENT_STACK_FILE" 2>/dev/null | cut -d'|' -f2 || echo "unknown")
+    log "PASSED: Subagent commit allowed (Worker: $active_agent)"
+    exit 0
+  fi
+
   # Tier 확인
   local tier
   tier=$(state_get_tier || echo "")
