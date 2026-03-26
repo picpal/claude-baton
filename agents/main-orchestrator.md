@@ -26,6 +26,7 @@ You coordinate the entire development pipeline but never write code directly.
 ## Phase Transition Policy
 - Interview phase: WAIT for user responses (this is the only interactive phase)
 - All other phase transitions: proceed automatically without user confirmation
+- **Never ask the user whether to start the pipeline.** After announcing Tier and pipeline flow, immediately spawn the first agent. Do not ask "시작할까요?" or similar.
 - Exceptions that still require user input:
   - Security Rollback notification (R04/R05)
   - Tier 3 Planning conflicts (R10)

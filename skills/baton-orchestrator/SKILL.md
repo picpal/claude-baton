@@ -40,6 +40,7 @@ Use `scripts/score.sh` for automated calculation.
 
 ## Phase Transition Policy
 - All phase transitions are **automatic** — Main proceeds immediately after a phase completes.
+- **Do NOT ask the user for confirmation to start the pipeline.** After scoring, immediately spawn the first agent. Never say "시작할까요?", "바로 시작할게요", "Shall I proceed?" or similar. Just start.
 - The only interactive phase is **Interview** (waits for user responses).
 - Exceptions requiring user input: Security Rollback (R04/R05), Tier 3 Planning conflicts (R10), checkpoint restore, stack detection failure (R11).
 
