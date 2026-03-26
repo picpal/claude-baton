@@ -61,12 +61,6 @@ Use `scripts/score.sh` for automated calculation.
 - Unit QA failure >3 attempts → escalate to Task Manager
 - Both must pass before Code Review
 
-## Worktree Isolation Strategy
-- Worker agents run in `isolation: "worktree"` mode
-- Each Worker operates in an isolated git worktree to prevent parallel file conflicts
-- After Worker completion, Main merges the result branch
-- If conflicts or inconsistencies are detected during QA/Review → reported to Main → Main instructs the relevant Worker to fix → QA re-run
-
 ## Security Rollback (CRITICAL/HIGH only)
 1. Halt pipeline → 2. git revert to last safe tag → 3. Notify user + wait for confirmation
 4. Generate security report → 5. Re-enter Planning → 6. Auto-include security-constraints.md

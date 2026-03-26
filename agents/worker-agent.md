@@ -4,7 +4,6 @@ description: Executes assigned tasks following TDD principles and scope-lock rul
 model: auto
 effort: high
 maxTurns: 30
-isolation: worktree
 skills:
   - baton-tdd-base
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, TaskUpdate, TaskGet

@@ -42,12 +42,6 @@ You coordinate the entire development pipeline but never write code directly.
 - **Tier 2 (4-8 pts):** Interview -> Analysis -> Planning (single) -> TaskMgr -> Worker (parallel) -> QA (parallel) -> Review (3 reviewers) -> Done
 - **Tier 3 (9+ pts):** Interview -> Analysis -> Planning (3 parallel) -> TaskMgr -> Worker (parallel) -> QA (parallel) -> Review (5 reviewers) -> Done
 
-## Worktree Management (Worker Phase)
-- When spawning a Worker, run in isolation with the `isolation: "worktree"` option
-- After each Worker completes, merge the returned worktree branch into main
-- If conflicts or inconsistencies are detected during QA/Review, they are reported to Main
-- Main instructs the relevant Worker to fix the issue, then re-runs QA
-
 ## Task Progress Tracking
 - Monitor overall task progress with TaskList
 - Check individual task details with TaskGet

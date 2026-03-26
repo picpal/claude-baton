@@ -36,11 +36,6 @@ Interview
 
 ## Phase 5: Workers (Parallel)
 
-### Worktree Isolation (Worker Phase)
-- Each Worker runs in an isolated git worktree with the `isolation: "worktree"` option
-- Prevents file conflicts between parallel Workers
-- After completion, Main merges the branch; conflicts or inconsistencies are detected during QA/Review and the Worker is instructed to fix them
-
 ## Phase 7: Code Review (5 Reviewers)
 
 | Reviewer | Focus | Tier 2? | Tier 3? |

@@ -46,11 +46,6 @@ Interview
 - scope-lock enforced per worker
 - Commit on completion (draft)
 
-#### Worktree Isolation (Worker Phase)
-- Each Worker runs in an isolated git worktree with the `isolation: "worktree"` option
-- Prevents file conflicts between parallel Workers
-- After completion, Main merges the branch; conflicts or inconsistencies are detected during QA/Review and the Worker is instructed to fix them
-
 ### Phase 6: QA (Parallel)
 - Unit QA + Integration QA run simultaneously
 - Multi-stack: include cross-stack API contract tests
