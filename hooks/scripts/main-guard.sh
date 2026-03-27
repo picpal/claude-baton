@@ -127,7 +127,7 @@ Main Orchestrator는 코드 파일을 직접 수정할 수 없습니다.
   - .gitignore
 
 올바른 방법:
-  Agent(subagent_type="general-purpose",
+  Agent(subagent_type="claude-baton:worker-agent",
         description="Worker: {작업명}",
         model="opus" or "sonnet",
         prompt="...")
