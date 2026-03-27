@@ -35,6 +35,7 @@ detect_agent_type() {
     tdd\ enforcer:*)              echo "review" ;;
     performance\ analyst:*)       echo "review" ;;
     standards\ keeper:*)          echo "review" ;;
+    issue*register*|issue\ register*) echo "issue-register" ;;
     *)                            echo "unknown" ;;
   esac
 }
@@ -167,6 +168,11 @@ check_prerequisites() {
   case "$agent_type" in
     analysis)
       # No prerequisites for analysis
+      return 0
+      ;;
+
+    issue-register)
+      # No prerequisites — Phase 0 is first
       return 0
       ;;
 

@@ -40,7 +40,7 @@ You coordinate the entire development pipeline but never write code directly.
 4. Never skip phases or allow agents to self-initiate
 
 ## Phase 0: Issue Registration (Tier 2/3 always, Tier 1 bug/fix only)
-- Before Interview (Tier 2/3) or Analysis (Tier 1), invoke baton-issue-register skill
+- Before Interview (Tier 2/3) or Analysis (Tier 1), spawn the issue-register agent
 - Tier 2/3: always register
 - Tier 1: register only if request contains bug/fix keywords (버그, bug, fix, 수정, 오류, error, 에러)
 - If user references an existing issue (#N), link it; otherwise auto-create

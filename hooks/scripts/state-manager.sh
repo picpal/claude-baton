@@ -3,7 +3,8 @@
 # Usage: source "$SCRIPT_DIR/state-manager.sh"
 #
 # Functions:
-#   state_init        - Create state.json with initial schema if missing
+#   state_migrate     - Add missing fields to existing state.json (schema migration)
+#   state_init        - Create state.json with initial schema if missing; migrates existing
 #   state_read        - Read a field (dot notation) from state.json
 #   state_write       - Update a field in state.json (auto-updates timestamp)
 #   state_get_tier    - Shorthand: read currentTier
@@ -16,8 +17,86 @@ source "$SCRIPT_DIR/find-baton-root.sh"
 
 STATE_FILE="$BATON_DIR/state.json"
 
+state_migrate() {
+  if [ ! -f "$STATE_FILE" ]; then
+    return 0
+  fi
+
+  BATON_STATE_FILE="$STATE_FILE" python3 -c "
+import json, os
+
+state_file = os.environ['BATON_STATE_FILE']
+
+with open(state_file, 'r') as f:
+    data = json.load(f)
+
+current_version = data.get('version', 1)
+changed = False
+
+# Full default schema (version 2)
+default_schema = {
+    'version': 2,
+    'currentTier': None,
+    'currentPhase': 'idle',
+    'phaseFlags': {
+        'analysisCompleted': False,
+        'interviewCompleted': False,
+        'planningCompleted': False,
+        'taskMgrCompleted': False,
+        'workerCompleted': False,
+        'qaUnitPassed': False,
+        'qaIntegrationPassed': False,
+        'reviewCompleted': False,
+        'issueRegistered': False
+    },
+    'planningTracker': { 'expected': 0, 'completed': [] },
+    'reviewTracker': { 'expected': 0, 'completed': [] },
+    'workerTracker': { 'expected': 0, 'doneCount': 0 },
+    'qaRetryCount': {},
+    'reworkStatus': { 'active': False, 'attemptCount': 0 },
+    'securityHalt': False,
+    'lastSafeTag': None,
+    'issueNumber': None,
+    'issueUrl': None,
+    'issueLabels': [],
+    'isExistingIssue': False,
+    'timestamp': ''
+}
+
+# Add missing top-level fields
+for key, default_val in default_schema.items():
+    if key == 'version':
+        continue
+    if key not in data:
+        data[key] = default_val
+        changed = True
+
+# Add missing nested fields for dict-type defaults
+for key, default_val in default_schema.items():
+    if isinstance(default_val, dict) and key in data and isinstance(data[key], dict):
+        for sub_key, sub_default in default_val.items():
+            if sub_key not in data[key]:
+                data[key][sub_key] = sub_default
+                changed = True
+
+# Bump version if schema changed
+if changed or current_version < default_schema['version']:
+    data['version'] = default_schema['version']
+    changed = True
+
+if changed:
+    with open(state_file, 'w') as f:
+        json.dump(data, f, indent=2)
+        f.write('\n')
+" 2>/dev/null
+  if [ $? -ne 0 ]; then
+    echo "[state-manager] state_migrate failed: could not update $STATE_FILE" >&2
+  fi
+}
+
 state_init() {
   if [ -f "$STATE_FILE" ]; then
+    state_migrate
     return 0
   fi
 
@@ -29,7 +108,7 @@ import json, os
 state_file = os.environ['BATON_STATE_FILE']
 
 state = {
-    'version': 1,
+    'version': 2,
     'currentTier': None,
     'currentPhase': 'idle',
     'phaseFlags': {
