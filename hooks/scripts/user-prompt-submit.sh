@@ -35,7 +35,24 @@ else
   PHASE="idle"
 fi
 
-cat <<EOF
+LAST_PHASE_FILE="$BATON_DIR/logs/.last-prompt-phase"
+LAST_PHASE=""
+if [ -f "$LAST_PHASE_FILE" ]; then
+  LAST_PHASE=$(cat "$LAST_PHASE_FILE" 2>/dev/null)
+fi
+
+if [ "$LAST_PHASE" = "$PHASE" ]; then
+  # Same phase — output 1-line summary only
+  cat <<EOF
+<user-prompt-submit-hook>
+[Baton] T:${TIER}|P:${PHASE}|${DONE}/${TOTAL}
+</user-prompt-submit-hook>
+EOF
+else
+  # Phase changed or first run — output full block and update cache
+  mkdir -p "$(dirname "$LAST_PHASE_FILE")"
+  printf '%s' "$PHASE" > "$LAST_PHASE_FILE"
+  cat <<EOF
 <user-prompt-submit-hook>
 [Baton] Tier: ${TIER} | Phase: ${PHASE} | Tasks: ${DONE}/${TOTAL}
 
@@ -57,3 +74,4 @@ E) COMMAND — 슬래시 명령어 → 명령어 실행
 - git 명령어 (태그, 커밋)
 </user-prompt-submit-hook>
 EOF
+fi

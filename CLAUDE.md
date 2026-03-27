@@ -18,16 +18,7 @@ All work must be delegated by spawning specialized agents.
                           records them in complexity-score.md, and injects them into all subsequent spawns.
 
 ## Complexity Scoring
-| Criterion | Score |
-|-----------|-------|
-| Expected files to change (1 file = 1pt, max 5pt) | 0–5 |
-| Cross-service dependency | +3 |
-| New feature (not modifying existing) | +2 |
-| Includes architectural decisions | +3 |
-| Security / auth / payment related | +4 |
-| DB schema change | +3 |
-
-0–3 pts → Tier 1 / 4–8 pts → Tier 2 / 9+ pts → Tier 3
+Complexity scoring and Tier thresholds are defined in baton-orchestrator skill (references/scoring.md).
 
 ## Pipeline by Tier
 
@@ -49,61 +40,41 @@ When the Task Manager writes todo.md, it references the file→stack mapping in 
 to auto-tag each task with its stack. Main injects the corresponding stacks/ skill into context when spawning Workers.
 
 ## Worker Model Assignment
-- Low → Sonnet: files ≤3 · no dependencies · no architectural decisions
-- High → Opus: files >3 · cross-service · architectural decisions · security-related
+Worker model assignment rules are defined in baton-orchestrator skill.
 
 ## QA Rules
-- Unit QA + Integration QA run in parallel
-- Multi-stack projects: include cross-stack API contract tests in Integration QA
-- Unit QA failure exceeding 3 attempts → escalate to Phase 5 (Task Manager)
-- Both must pass before Code Review proceeds
+QA rules are defined in baton-orchestrator skill and qa-unit/qa-integration agent definitions.
 
 ## Security Rollback Protocol
-Trigger: Security Guardian declares CRITICAL/HIGH
-1. Immediately halt the entire pipeline
-2. git revert — bulk revert to the last safe/task-{n} tag (partial revert prohibited)
-3. Immediately notify user and wait for confirmation before resuming
-4. Auto-generate .pipeline/reports/security-report.md
-5. Re-enter Phase 3 (Planning) — not Task Manager
-6. security-constraints.md auto-included in all subsequent spawns
-
-Severity criteria:
-- CRITICAL: key/secret exposure, auth bypass, SQL Injection, RCE → Rollback
-- HIGH: privilege escalation, sensitive info logging, missing encryption → Rollback
-- MEDIUM or below: standard rework loop
+Security Rollback Protocol is defined in baton-orchestrator skill. Only the Security Guardian can declare CRITICAL/HIGH Rollback.
 
 ## safe-commit Tag Strategy
-Worker completion commit (draft)
-  ↓ Unit QA pass
-git tag safe/task-{id}         ← Rollback checkpoint
-  ↓ Integration QA pass
-git tag safe/integration-{n}   ← Session integration checkpoint
-[Tier 3] Immediately after Planning completion
-git tag safe/baseline          ← Full session checkpoint
+safe-commit tag strategy is defined in baton-orchestrator skill.
 
 ## Logging
-Controlled by LOG_MODE environment variable:
-- minimal:   agent start/complete/error only
-- execution: step-by-step output summary + file change details (default)
-- verbose:   full prompt dump + diff
-Security issues are force-logged regardless of LOG_MODE.
+Logging is controlled by LOG_MODE env var (minimal/execution/verbose). Details in baton-orchestrator skill.
 
-## Shared Artifact Store (.pipeline/)
-plan.md                 — Design document
-issue.md                — GitHub Issue tracking (number, URL, labels)
-todo.md                 — Task list + progress status + stack tags (auto)
-complexity-score.md     — Score + Tier + detected stack mapping
-security-constraints.md — Security constraints (created after Rollback)
-review-report.md        — Consolidated Code Review report
-lessons.md              — Lessons learned / recurrence prevention rules
-logs/exec.log           — Execution log
-logs/prompt.log         — Prompt dump (verbose mode)
-reports/                — Security reports, etc.
+## Shared Artifact Store (.baton/)
+Artifact store (.baton/) structure is defined in baton-orchestrator skill (references/artifacts.md).
 
 ## Self-Improvement Loop
 - On user correction → update lessons.md
 - On session start → review lessons.md first
 - After Security Rollback → add pattern to security-constraints.md
+
+## LESSON_REPORT Format
+Agents report lessons by including this block in their output:
+```
+LESSON_REPORT:
+  trigger: {trigger}
+  category: {tdd|security|quality|integration|architecture|scope|process}
+  severity: {critical|high|medium}
+  task: {task-id or "session-level"}
+  what_happened: {1-2 sentence description}
+  root_cause: {1-2 sentence cause}
+  rule: {imperative rule for prevention}
+  files: {paths or "N/A"}
+```
 
 ## Principles
 - Simplicity First: All changes are minimal. No side effects.

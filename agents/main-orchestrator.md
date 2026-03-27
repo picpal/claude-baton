@@ -48,6 +48,21 @@ You coordinate the entire development pipeline but never write code directly.
 - If gh CLI is unavailable, skip gracefully (pipeline continues without issue tracking)
 - On pipeline completion: `gh issue close #N --comment "파이프라인 완료 — 자동 종료"`
 
+## Artifact Passing Strategy
+When spawning agents, pass artifact FILE PATHS instead of full content.
+Agents will Read files on demand using their Read tool.
+
+Example prompt to agent:
+  "Artifacts available in .baton/:
+    - .baton/plan.md (architecture design)
+    - .baton/todo.md (task list with stack tags)
+    - .baton/complexity-score.md (tier + file-stack mapping)
+    - .baton/issue.md (GitHub issue tracking)
+  Read only the files relevant to your task."
+
+Do NOT embed plan.md, todo.md, or complexity-score.md content in agent prompts.
+Exception: Small artifacts (<500 bytes) like issue.md may be embedded directly.
+
 ## Tier Pipelines
 - **Tier 1 (0-3 pts):** [Issue Registration (bug/fix only)] -> Analysis (lightweight + stack detection) -> Worker direct -> Unit QA -> Done
 - **Tier 2 (4-8 pts):** Issue Registration -> Interview -> Analysis -> Planning (single) -> TaskMgr -> Worker (parallel) -> QA (parallel) -> Review (3 reviewers) -> Done
