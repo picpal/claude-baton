@@ -167,8 +167,11 @@ check_prerequisites() {
 
   case "$agent_type" in
     analysis)
-      # No prerequisites for analysis
-      return 0
+      # Tier 2/3: requires issueRegistered (Phase 0)
+      if [ "$TIER" != "1" ] && [ "$FLAG_ISSUE" != "true" ]; then
+        missing="issueRegistered"
+        prereq_lines="  - issueRegistered: $FLAG_ISSUE"
+      fi
       ;;
 
     issue-register)
