@@ -271,8 +271,16 @@ For `lessons.md`, initialize with this header instead of an empty file:
 ```markdown
 # Lessons Learned
 
-> Auto-recorded by the claude-baton pipeline. Each entry follows the LESSON_REPORT protocol.
-> Main Orchestrator reviews this file at session start to apply past rules as active constraints.
+## Active Rules
+
+<!-- Format: - L-{ID} | {category} | {severity} | {rule}  -->
+<!--           keywords: {comma-separated keywords}         -->
+
+
+---
+<!-- DETAIL_BOUNDARY -->
+
+## Full Details
 ```
 
 For `state.json`, initialize with:

@@ -19,7 +19,13 @@ Execute a security rollback to the last safe tag.
 4. Commit: git commit -m "revert: security rollback to {safe-tag}"
 5. Generate .baton/reports/security-report.md
 6. Create/update .baton/security-constraints.md
-7. Append a lesson entry to `.baton/lessons.md` in the following format:
+7. Append a lesson entry to `.baton/lessons.md` in BOTH sections:
+   - Append one-liner before DETAIL_BOUNDARY (Active Rules section):
+   ```markdown
+   - L-{YYYY-MM-DD}-{seq} | security | critical | {imperative prevention rule derived from the finding}
+     keywords: {comma-separated keywords derived from the finding}
+   ```
+   - Append full entry after DETAIL_BOUNDARY (Full Details section):
    ```markdown
    ---
    ### L-{YYYY-MM-DD}-{seq} | security | critical

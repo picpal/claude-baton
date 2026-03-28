@@ -87,9 +87,10 @@ Exception: Small artifacts (<500 bytes) like issue.md may be embedded directly.
 ## Self-Improvement Loop
 
 ### Session Start
-1. Read `.baton/lessons.md` before any work
-2. Extract all `rule:` entries and hold them as active constraints for the session
-3. If a rule is relevant to the current request, cite the lesson ID (e.g., L-2026-03-20-01) when explaining your decision
+1. Read `.baton/lessons.md` with limit up to `DETAIL_BOUNDARY` line (Active Rules section only)
+2. Hold all Active Rules as session constraints — each rule has keywords for request matching
+3. If a rule's keywords match the current request, cite the lesson ID when explaining decisions
+4. For full lesson context (what happened, root cause), Read beyond DETAIL_BOUNDARY by lesson ID
 
 ### LESSON_REPORT Protocol
 Agents report lessons by including a `LESSON_REPORT:` block in their output.
@@ -98,18 +99,22 @@ Main is the **single writer** to `.baton/lessons.md` (except during Rollback, wh
 When you receive a LESSON_REPORT from any agent:
 1. Parse the report fields
 2. Assign the next sequential ID: `L-{YYYY-MM-DD}-{seq}` (seq resets daily, zero-padded to 2 digits)
-3. Append an entry to `.baton/lessons.md` in this format:
-
-```markdown
----
-### L-{YYYY-MM-DD}-{seq} | {category} | {severity}
-- **trigger**: {trigger}
-- **task**: {task-id or "session-level"}
-- **what happened**: {1-2 sentence problem description}
-- **root cause**: {1-2 sentence cause analysis}
-- **rule**: {imperative rule for future prevention}
-- **files**: {related file paths or "N/A"}
-```
+3. Append one-liner to Active Rules section (before DETAIL_BOUNDARY):
+   ```markdown
+   - L-{YYYY-MM-DD}-{seq} | {category} | {severity} | {rule}
+     keywords: {keywords}
+   ```
+4. Append full entry to Full Details section (after DETAIL_BOUNDARY):
+   ```markdown
+   ---
+   ### L-{YYYY-MM-DD}-{seq} | {category} | {severity}
+   - **trigger**: {trigger}
+   - **task**: {task-id or "session-level"}
+   - **what happened**: {1-2 sentence problem description}
+   - **root cause**: {1-2 sentence cause analysis}
+   - **rule**: {imperative rule for future prevention}
+   - **files**: {related file paths or "N/A"}
+   ```
 
 ### Lesson Trigger Events
 

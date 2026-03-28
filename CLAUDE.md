@@ -73,6 +73,7 @@ LESSON_REPORT:
   what_happened: {1-2 sentence description}
   root_cause: {1-2 sentence cause}
   rule: {imperative rule for prevention}
+  keywords: {comma-separated keywords for matching}
   files: {paths or "N/A"}
 ```
 
