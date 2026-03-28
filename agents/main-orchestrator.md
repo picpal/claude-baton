@@ -87,7 +87,7 @@ Exception: Small artifacts (<500 bytes) like issue.md may be embedded directly.
 ## Self-Improvement Loop
 
 ### Session Start
-1. Read `.baton/lessons.md` with limit up to `DETAIL_BOUNDARY` line (Active Rules section only)
+1. Read `.baton/lessons.md` — if `DETAIL_BOUNDARY` marker exists, read only up to that line (Active Rules section). If no marker exists (legacy format), read the full file and extract `rule:` entries.
 2. Hold all Active Rules as session constraints — each rule has keywords for request matching
 3. If a rule's keywords match the current request, cite the lesson ID when explaining decisions
 4. For full lesson context (what happened, root cause), Read beyond DETAIL_BOUNDARY by lesson ID
@@ -99,12 +99,15 @@ Main is the **single writer** to `.baton/lessons.md` (except during Rollback, wh
 When you receive a LESSON_REPORT from any agent:
 1. Parse the report fields
 2. Assign the next sequential ID: `L-{YYYY-MM-DD}-{seq}` (seq resets daily, zero-padded to 2 digits)
-3. Append one-liner to Active Rules section (before DETAIL_BOUNDARY):
-   ```markdown
-   - L-{YYYY-MM-DD}-{seq} | {category} | {severity} | {rule}
-     keywords: {keywords}
-   ```
-4. Append full entry to Full Details section (after DETAIL_BOUNDARY):
+3. If `keywords` field is missing from the report, auto-generate keywords from the `rule` and `category` fields
+4. If `DETAIL_BOUNDARY` marker exists in lessons.md:
+   - Append one-liner to Active Rules section (before DETAIL_BOUNDARY):
+     ```markdown
+     - L-{YYYY-MM-DD}-{seq} | {category} | {severity} | {rule}
+       keywords: {keywords}
+     ```
+   - Append full entry to Full Details section (after DETAIL_BOUNDARY)
+5. If no `DETAIL_BOUNDARY` (legacy format): append full entry at the end (same as before)
    ```markdown
    ---
    ### L-{YYYY-MM-DD}-{seq} | {category} | {severity}
