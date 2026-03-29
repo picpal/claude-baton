@@ -23,7 +23,7 @@ log() {
 
 block() {
   log "BLOCKED: $1"
-  echo "$1"
+  echo "$1" >&2
   exit 2
 }
 
@@ -64,9 +64,9 @@ is_safe_command() {
     return 0
   fi
 
-  # Directory/navigation commands
-  if [[ "$cmd" =~ ^(mkdir|touch|ls|pwd|cd|tree|which|type|command|where|file|stat|wc|du|df)[[:space:]] ]] || \
-     [[ "$cmd" =~ ^(mkdir|touch|ls|pwd|cd|tree|which|type|command|where|file|stat|wc|du|df)$ ]]; then
+  # Directory/navigation/shell-builtin commands
+  if [[ "$cmd" =~ ^(mkdir|touch|ls|pwd|cd|tree|which|type|command|where|file|stat|wc|du|df|test|\[|source|\.)[[:space:]] ]] || \
+     [[ "$cmd" =~ ^(mkdir|touch|ls|pwd|cd|tree|which|type|command|where|file|stat|wc|du|df|test|\[|source|\.)$ ]]; then
     return 0
   fi
 
@@ -115,9 +115,17 @@ is_safe_command() {
     return 1
   fi
 
-  # npm/yarn/pnpm info/list/install (not scripts that might modify)
+  # Package managers — install/info/list
   if [[ "$cmd" =~ ^(npm|yarn|pnpm)[[:space:]]+(install|ci|list|ls|info|view|outdated|audit|pack|version)[[:space:]] ]] || \
      [[ "$cmd" =~ ^(npm|yarn|pnpm)[[:space:]]+(install|ci|list|ls|info|view|outdated|audit|pack|version)$ ]]; then
+    return 0
+  fi
+  if [[ "$cmd" =~ ^(pip|pip3)[[:space:]]+(install|list|show|freeze|check)[[:space:]] ]] || \
+     [[ "$cmd" =~ ^(pip|pip3)[[:space:]]+(install|list|show|freeze|check)$ ]]; then
+    return 0
+  fi
+  if [[ "$cmd" =~ ^(bundle|gem)[[:space:]]+(install|list|info|outdated)[[:space:]] ]] || \
+     [[ "$cmd" =~ ^(bundle|gem)[[:space:]]+(install|list|info|outdated)$ ]]; then
     return 0
   fi
 
@@ -316,18 +324,12 @@ main() {
     local truncated="${command:0:100}"
     log "BLOCKED: Dangerous bash command: $truncated"
 
-    cat <<EOF
+    cat >&2 <<EOF
 ⛔ [Main Guard Bash] R01 위반 — Main의 Bash 코드 수정 차단
 
 차단된 명령어: $truncated
 
-Main Orchestrator는 Bash를 통해 코드 파일을 수정할 수 없습니다.
 코드 수정은 반드시 Worker Agent에게 위임하세요.
-
-허용되는 Bash 사용:
-  - git 명령어 (태그, 커밋, 상태 확인)
-  - .baton/ 파일 읽기/쓰기
-  - 디렉토리 생성/확인
 EOF
 
     exit 2
