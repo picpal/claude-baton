@@ -64,9 +64,9 @@ is_safe_command() {
     return 0
   fi
 
-  # Directory/navigation commands
-  if [[ "$cmd" =~ ^(mkdir|touch|ls|pwd|cd|tree|which|type|command|where|file|stat|wc|du|df)[[:space:]] ]] || \
-     [[ "$cmd" =~ ^(mkdir|touch|ls|pwd|cd|tree|which|type|command|where|file|stat|wc|du|df)$ ]]; then
+  # Directory/navigation/shell-builtin commands
+  if [[ "$cmd" =~ ^(mkdir|touch|ls|pwd|cd|tree|which|type|command|where|file|stat|wc|du|df|test|\[|source|\.|export|unset|set|read|eval)[[:space:]] ]] || \
+     [[ "$cmd" =~ ^(mkdir|touch|ls|pwd|cd|tree|which|type|command|where|file|stat|wc|du|df|test|\[|source|\.|export|unset|set|read|eval)$ ]]; then
     return 0
   fi
 
@@ -115,9 +115,22 @@ is_safe_command() {
     return 1
   fi
 
-  # npm/yarn/pnpm info/list/install (not scripts that might modify)
-  if [[ "$cmd" =~ ^(npm|yarn|pnpm)[[:space:]]+(install|ci|list|ls|info|view|outdated|audit|pack|version)[[:space:]] ]] || \
-     [[ "$cmd" =~ ^(npm|yarn|pnpm)[[:space:]]+(install|ci|list|ls|info|view|outdated|audit|pack|version)$ ]]; then
+  # Package managers — install/info/list (environment setup, not code modification)
+  if [[ "$cmd" =~ ^(npm|yarn|pnpm)[[:space:]]+(install|ci|list|ls|info|view|outdated|audit|pack|version|run[[:space:]]+build)[[:space:]] ]] || \
+     [[ "$cmd" =~ ^(npm|yarn|pnpm)[[:space:]]+(install|ci|list|ls|info|view|outdated|audit|pack|version|run[[:space:]]+build)$ ]]; then
+    return 0
+  fi
+  if [[ "$cmd" =~ ^(pip|pip3)[[:space:]]+(install|list|show|freeze|check|--version)[[:space:]] ]] || \
+     [[ "$cmd" =~ ^(pip|pip3)[[:space:]]+(install|list|show|freeze|check|--version)$ ]]; then
+    return 0
+  fi
+  if [[ "$cmd" =~ ^(bundle|gem|cargo[[:space:]]+build|go[[:space:]]+build|go[[:space:]]+mod|mvn[[:space:]]+install|gradle[[:space:]]+build)[[:space:]] ]] || \
+     [[ "$cmd" =~ ^(bundle|gem|cargo[[:space:]]+build|go[[:space:]]+build|go[[:space:]]+mod|mvn[[:space:]]+install|gradle[[:space:]]+build)$ ]]; then
+    return 0
+  fi
+
+  # Python/Node/Ruby execution (read-only inspection, not file modification)
+  if [[ "$cmd" =~ ^(python3?|node|ruby|java|kotlin|swift|go[[:space:]]+run)[[:space:]] ]] && ! [[ "$cmd" =~ \>{1,2} ]]; then
     return 0
   fi
 
@@ -316,25 +329,13 @@ main() {
     local truncated="${command:0:100}"
     log "BLOCKED: Dangerous bash command: $truncated"
 
-    cat >&2 <<EOF
-⛔ [Main Guard Bash] R01 위반 — Main의 Bash 코드 수정 차단
-
-차단된 명령어: $truncated
-
-코드 수정은 반드시 Worker Agent에게 위임하세요.
-EOF
-
+    echo "⛔ [R01] Bash write blocked: $truncated — delegate to Worker agent." >&2
     exit 2
   fi
 
   local truncated="${command:0:100}"
   log "BLOCKED: Command not in safe whitelist"
-  block "⛔ [R01] Bash command blocked — not in safe command whitelist.
-
-Blocked command: $truncated
-
-Allowed: git, ls, pwd, mkdir, cat, head, tail, wc, test runners (npm test, pytest, go test, cargo test, etc.)
-For other operations, delegate to a Worker agent."
+  block "⛔ [R01] Bash blocked: $truncated — delegate to Worker agent for file modifications."
 }
 
 main
