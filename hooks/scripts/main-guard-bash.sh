@@ -64,9 +64,9 @@ is_safe_command() {
     return 0
   fi
 
-  # Directory/navigation/shell-builtin commands
-  if [[ "$cmd" =~ ^(mkdir|touch|ls|pwd|cd|tree|which|type|command|where|file|stat|wc|du|df|test|\[|source|\.)[[:space:]] ]] || \
-     [[ "$cmd" =~ ^(mkdir|touch|ls|pwd|cd|tree|which|type|command|where|file|stat|wc|du|df|test|\[|source|\.)$ ]]; then
+  # Directory/navigation commands
+  if [[ "$cmd" =~ ^(mkdir|touch|ls|pwd|cd|tree|which|type|command|where|file|stat|wc|du|df)[[:space:]] ]] || \
+     [[ "$cmd" =~ ^(mkdir|touch|ls|pwd|cd|tree|which|type|command|where|file|stat|wc|du|df)$ ]]; then
     return 0
   fi
 
@@ -115,17 +115,9 @@ is_safe_command() {
     return 1
   fi
 
-  # Package managers — install/info/list
+  # npm/yarn/pnpm info/list/install (not scripts that might modify)
   if [[ "$cmd" =~ ^(npm|yarn|pnpm)[[:space:]]+(install|ci|list|ls|info|view|outdated|audit|pack|version)[[:space:]] ]] || \
      [[ "$cmd" =~ ^(npm|yarn|pnpm)[[:space:]]+(install|ci|list|ls|info|view|outdated|audit|pack|version)$ ]]; then
-    return 0
-  fi
-  if [[ "$cmd" =~ ^(pip|pip3)[[:space:]]+(install|list|show|freeze|check)[[:space:]] ]] || \
-     [[ "$cmd" =~ ^(pip|pip3)[[:space:]]+(install|list|show|freeze|check)$ ]]; then
-    return 0
-  fi
-  if [[ "$cmd" =~ ^(bundle|gem)[[:space:]]+(install|list|info|outdated)[[:space:]] ]] || \
-     [[ "$cmd" =~ ^(bundle|gem)[[:space:]]+(install|list|info|outdated)$ ]]; then
     return 0
   fi
 
