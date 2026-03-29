@@ -70,13 +70,17 @@ is_safe_command() {
     return 0
   fi
 
-  # Read-only commands (without redirection to non-.baton files)
-  if [[ "$cmd" =~ ^(cat|head|tail|less|more|bat)[[:space:]] ]] && ! [[ "$cmd" =~ \>{1,2} ]]; then
+  # Helper: strip fd redirects (2>&1, >&2) to avoid false positives
+  local cmd_no_fd
+  cmd_no_fd=$(echo "$cmd" | sed -E 's/[0-9]*>&[0-9]+//g')
+
+  # Read-only commands (without file redirection)
+  if [[ "$cmd" =~ ^(cat|head|tail|less|more|bat)[[:space:]] ]] && ! [[ "$cmd_no_fd" =~ \>{1,2} ]]; then
     return 0
   fi
 
-  # echo to stdout only (no redirection to non-.baton files)
-  if [[ "$cmd" =~ ^(echo|printf)[[:space:]] ]] && ! [[ "$cmd" =~ \>{1,2} ]]; then
+  # echo to stdout only (no file redirection)
+  if [[ "$cmd" =~ ^(echo|printf)[[:space:]] ]] && ! [[ "$cmd_no_fd" =~ \>{1,2} ]]; then
     return 0
   fi
 
@@ -105,7 +109,7 @@ is_safe_command() {
 
   # Commands that only read or inspect
   if [[ "$cmd" =~ ^(grep|rg|ag|egrep|fgrep|find|fd|jq|yq|node[[:space:]]+-e|python3?[[:space:]]+-c|ruby[[:space:]]+-e|diff|md5|shasum|sha256sum|date|env|printenv|uname|hostname|id|whoami)[[:space:]] ]]; then
-    if ! [[ "$cmd" =~ \>{1,2} ]]; then
+    if ! [[ "$cmd_no_fd" =~ \>{1,2} ]]; then
       return 0
     fi
     # If redirecting, check if target is .baton/
@@ -130,7 +134,7 @@ is_safe_command() {
   fi
 
   # Python/Node/Ruby execution (read-only inspection, not file modification)
-  if [[ "$cmd" =~ ^(python3?|node|ruby|java|kotlin|swift|go[[:space:]]+run)[[:space:]] ]] && ! [[ "$cmd" =~ \>{1,2} ]]; then
+  if [[ "$cmd" =~ ^(python3?|node|ruby|java|kotlin|swift|go[[:space:]]+run)[[:space:]] ]] && ! [[ "$cmd_no_fd" =~ \>{1,2} ]]; then
     return 0
   fi
 
