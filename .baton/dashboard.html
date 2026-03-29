@@ -1,0 +1,1454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>claude-baton Pipeline Dashboard</title>
+<style>
+  :root {
+    --bg-primary: #0f1923;
+    --bg-secondary: #1a2734;
+    --bg-card: #1e2f3f;
+    --bg-card-hover: #243a4e;
+    --border: #2a3f52;
+    --text-primary: #e8edf2;
+    --text-secondary: #8899aa;
+    --text-muted: #5a6b7c;
+    --accent-blue: #3b82f6;
+    --accent-green: #10b981;
+    --accent-red: #ef4444;
+    --accent-yellow: #f59e0b;
+    --accent-purple: #8b5cf6;
+    --accent-cyan: #06b6d4;
+    --accent-orange: #f97316;
+    --tier1: #10b981;
+    --tier2: #3b82f6;
+    --tier3: #8b5cf6;
+    --phase-done: #10b981;
+    --phase-active: #3b82f6;
+    --phase-pending: #3a4a5c;
+    --phase-failed: #ef4444;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  .container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 32px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .header h1 {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+  .header h1 span { color: var(--accent-blue); }
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .timestamp {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .btn {
+    padding: 8px 16px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg-card);
+    color: var(--text-primary);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn:hover { background: var(--bg-card-hover); border-color: var(--accent-blue); }
+  .btn-primary { background: var(--accent-blue); border-color: var(--accent-blue); }
+  .btn-primary:hover { background: #2563eb; }
+
+  /* Pipeline Timeline */
+  .pipeline-section {
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+    border: 1px solid var(--border);
+  }
+  .section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 16px;
+  }
+  .pipeline-timeline {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0;
+    padding: 16px 0;
+    overflow-x: auto;
+  }
+  .phase-node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 80px;
+    position: relative;
+  }
+  .phase-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 600;
+    position: relative;
+    z-index: 1;
+    transition: all 0.3s;
+  }
+  .phase-circle.done {
+    background: var(--phase-done);
+    color: white;
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.3);
+  }
+  .phase-circle.active {
+    background: var(--phase-active);
+    color: white;
+    box-shadow: 0 0 16px rgba(59, 130, 246, 0.5);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  .phase-circle.pending {
+    background: var(--phase-pending);
+    color: var(--text-muted);
+  }
+  .phase-circle.failed {
+    background: var(--phase-failed);
+    color: white;
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
+  }
+  .phase-label {
+    margin-top: 8px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    text-align: center;
+    white-space: nowrap;
+    min-height: 30px;
+  }
+  .phase-connector {
+    width: 40px;
+    height: 3px;
+    background: var(--phase-pending);
+    margin-top: 19px;
+    transition: background 0.3s;
+  }
+  .phase-connector.done { background: var(--phase-done); }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 16px rgba(59, 130, 246, 0.5); transform: scale(1); }
+    50% { box-shadow: 0 0 24px rgba(59, 130, 246, 0.8); transform: scale(1.08); }
+  }
+
+  /* Status Cards Row */
+  .status-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .status-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    transition: border-color 0.2s;
+  }
+  .status-card:hover { border-color: var(--accent-blue); }
+  .status-card-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 8px;
+  }
+  .status-card-value {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+  .status-card-sub {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+  }
+  .tier-badge {
+    display: inline-block;
+    padding: 4px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .tier-1 { background: rgba(16, 185, 129, 0.15); color: var(--tier1); border: 1px solid rgba(16, 185, 129, 0.3); }
+  .tier-2 { background: rgba(59, 130, 246, 0.15); color: var(--tier2); border: 1px solid rgba(59, 130, 246, 0.3); }
+  .tier-3 { background: rgba(139, 92, 246, 0.15); color: var(--tier3); border: 1px solid rgba(139, 92, 246, 0.3); }
+  .security-clear { color: var(--accent-green); }
+  .security-halt { color: var(--accent-red); }
+
+  /* Tracker Panels */
+  .tracker-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  @media (max-width: 900px) { .tracker-row { grid-template-columns: 1fr; } }
+  .tracker-panel {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+  .tracker-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .tracker-title {
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .tracker-count {
+    font-size: 13px;
+    color: var(--text-secondary);
+    background: var(--bg-primary);
+    padding: 2px 10px;
+    border-radius: 12px;
+  }
+  .progress-bar {
+    width: 100%;
+    height: 8px;
+    background: var(--bg-primary);
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 12px 0;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.8s ease;
+    background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan));
+  }
+  .progress-fill.complete { background: linear-gradient(90deg, var(--accent-green), #34d399); }
+  .tracker-list {
+    list-style: none;
+    margin-top: 12px;
+  }
+  .tracker-list li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    font-size: 13px;
+    color: var(--text-secondary);
+    border-bottom: 1px solid rgba(42, 63, 82, 0.5);
+  }
+  .tracker-list li:last-child { border-bottom: none; }
+  .tracker-list .check { color: var(--accent-green); }
+  .tracker-list .pending-dot { color: var(--text-muted); }
+
+  /* Task Board */
+  .task-board {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .task-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 14px;
+    margin-top: 16px;
+  }
+  .task-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    transition: all 0.2s;
+    border-left: 3px solid var(--accent-blue);
+  }
+  .task-card:hover { border-color: var(--accent-blue); background: var(--bg-card-hover); }
+  .task-card.done { border-left-color: var(--accent-green); opacity: 0.7; }
+  .task-card.improvement { border-left-color: var(--accent-purple); }
+  .task-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+  }
+  .task-id {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent-cyan);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+  .task-status-badge {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  .task-status-badge.pending { background: rgba(245, 158, 11, 0.15); color: var(--accent-yellow); }
+  .task-status-badge.done { background: rgba(16, 185, 129, 0.15); color: var(--accent-green); }
+  .task-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 10px;
+    line-height: 1.4;
+  }
+  .task-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .task-tag {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+  }
+  .task-tag.stack { color: var(--accent-cyan); border-color: rgba(6, 182, 212, 0.3); }
+  .task-tag.model { color: var(--accent-purple); border-color: rgba(139, 92, 246, 0.3); }
+  .task-tag.assignee { color: var(--accent-orange); border-color: rgba(249, 115, 22, 0.3); }
+  .task-files {
+    margin-top: 8px;
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+
+  /* Lessons */
+  .lessons-section {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .lesson-entry {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-top: 12px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .lesson-entry:hover { border-color: var(--accent-blue); }
+  .lesson-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .lesson-header:hover { background: var(--bg-card-hover); }
+  .lesson-header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .lesson-toggle {
+    font-size: 12px;
+    color: var(--text-muted);
+    transition: transform 0.2s;
+  }
+  .lesson-toggle.open { transform: rotate(90deg); }
+  .lesson-title {
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .lesson-date {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .severity-badge {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+  }
+  .severity-high { background: rgba(239, 68, 68, 0.15); color: var(--accent-red); }
+  .severity-medium { background: rgba(245, 158, 11, 0.15); color: var(--accent-yellow); }
+  .severity-low { background: rgba(16, 185, 129, 0.15); color: var(--accent-green); }
+  .lesson-body {
+    display: none;
+    padding: 0 16px 16px;
+    font-size: 13px;
+  }
+  .lesson-body.open { display: block; }
+  .lesson-field {
+    margin-bottom: 8px;
+  }
+  .lesson-field-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .lesson-field-value {
+    color: var(--text-secondary);
+    margin-top: 2px;
+    line-height: 1.5;
+  }
+  .lesson-rule {
+    background: var(--bg-primary);
+    border-left: 3px solid var(--accent-yellow);
+    padding: 8px 12px;
+    border-radius: 0 6px 6px 0;
+    font-size: 12px;
+    color: var(--accent-yellow);
+    margin-top: 8px;
+  }
+
+  /* Complexity */
+  .complexity-section {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .complexity-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-top: 16px;
+  }
+  @media (max-width: 768px) { .complexity-grid { grid-template-columns: 1fr; } }
+  .score-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .score-table th, .score-table td {
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+  }
+  .score-table th {
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .score-table td:nth-child(2) {
+    text-align: center;
+    font-weight: 700;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+  .score-total {
+    font-weight: 700;
+    color: var(--accent-blue);
+    font-size: 15px;
+  }
+  .stack-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .stack-table th, .stack-table td {
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+  }
+  .stack-table th {
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .stack-tag-cell {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 12px;
+    color: var(--accent-cyan);
+  }
+
+  /* Radar Chart */
+  .radar-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
+  }
+  .radar-container canvas {
+    max-width: 280px;
+    max-height: 280px;
+  }
+
+  /* Drop Zone */
+  .drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    text-align: center;
+    margin-bottom: 24px;
+    transition: all 0.3s;
+    background: var(--bg-secondary);
+  }
+  .drop-zone.drag-over {
+    border-color: var(--accent-blue);
+    background: rgba(59, 130, 246, 0.05);
+  }
+  .drop-zone-icon { font-size: 32px; margin-bottom: 8px; }
+  .drop-zone-text { font-size: 13px; color: var(--text-secondary); }
+  .drop-zone-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+  .file-input { display: none; }
+  .load-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  /* Toast notifications */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--bg-card);
+    border: 1px solid var(--accent-green);
+    border-radius: 8px;
+    padding: 12px 20px;
+    font-size: 13px;
+    color: var(--accent-green);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.3s;
+    z-index: 1000;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.error { border-color: var(--accent-red); color: var(--accent-red); }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .container { padding: 12px; }
+    .header { flex-direction: column; gap: 12px; }
+    .status-row { grid-template-columns: repeat(2, 1fr); }
+    .task-cards { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Header -->
+  <div class="header">
+    <h1><span>&#9670;</span> claude-baton <span style="font-weight:400;font-size:16px;color:var(--text-secondary)">Pipeline Dashboard</span></h1>
+    <div class="header-right">
+      <span id="conn-status" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--text-muted)">
+        <span id="conn-dot" style="width:8px;height:8px;border-radius:50%;background:var(--text-muted);display:inline-block"></span>
+        <span id="conn-label">Checking...</span>
+      </span>
+      <span class="timestamp" id="timestamp">--</span>
+      <button class="btn" onclick="fetchAndRender()">&#8635; Refresh</button>
+      <button class="btn" id="auto-refresh-btn" onclick="toggleAutoRefresh()" style="min-width:120px">&#9654; Auto 20s</button>
+    </div>
+  </div>
+
+  <!-- Pipeline Timeline -->
+  <div class="pipeline-section">
+    <div class="section-title">Pipeline Progress</div>
+    <div class="pipeline-timeline" id="pipeline-timeline"></div>
+  </div>
+
+  <!-- Status Cards -->
+  <div class="status-row" id="status-cards"></div>
+
+  <!-- Tracker Panels -->
+  <div class="tracker-row" id="tracker-panels"></div>
+
+  <!-- Task Board -->
+  <div class="task-board">
+    <div class="section-title">Task Board</div>
+    <div class="task-cards" id="task-cards"></div>
+  </div>
+
+  <!-- Lessons Learned -->
+  <div class="lessons-section">
+    <div class="section-title">Lessons Learned</div>
+    <div id="lessons-list"></div>
+  </div>
+
+  <!-- Complexity Score -->
+  <div class="complexity-section">
+    <div class="section-title">Complexity Score</div>
+    <div class="complexity-grid" id="complexity-grid"></div>
+  </div>
+
+  <!-- File Loader -->
+  <div class="drop-zone" id="drop-zone">
+    <div class="drop-zone-icon">&#128193;</div>
+    <div class="drop-zone-text">Drag &amp; drop files here to update dashboard</div>
+    <div class="drop-zone-sub">Accepts: state.json, todo.md, lessons.md, complexity-score.md</div>
+    <div class="load-buttons">
+      <button class="btn" onclick="document.getElementById('file-state').click()">Load state.json</button>
+      <button class="btn" onclick="document.getElementById('file-todo').click()">Load todo.md</button>
+      <button class="btn" onclick="document.getElementById('file-lessons').click()">Load lessons.md</button>
+      <button class="btn" onclick="document.getElementById('file-complexity').click()">Load complexity-score.md</button>
+    </div>
+    <input type="file" id="file-state" class="file-input" accept=".json" onchange="handleFileSelect(this, 'state')">
+    <input type="file" id="file-todo" class="file-input" accept=".md" onchange="handleFileSelect(this, 'todo')">
+    <input type="file" id="file-lessons" class="file-input" accept=".md" onchange="handleFileSelect(this, 'lessons')">
+    <input type="file" id="file-complexity" class="file-input" accept=".md" onchange="handleFileSelect(this, 'complexity')">
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// SAMPLE DATA (embedded defaults)
+// ============================================================
+
+const DEFAULT_STATE = {
+  version: 2,
+  currentTier: 2,
+  currentPhase: "worker",
+  phaseFlags: {
+    analysisCompleted: true,
+    interviewCompleted: true,
+    planningCompleted: true,
+    taskMgrCompleted: true,
+    workerCompleted: true,
+    qaUnitPassed: true,
+    qaIntegrationPassed: true,
+    reviewCompleted: true,
+    issueRegistered: false
+  },
+  planningTracker: { expected: 1, completed: ["security-hardening"] },
+  reviewTracker: { expected: 3, completed: ["security-guardian", "quality-inspector", "tdd-enforcer"] },
+  workerTracker: { expected: 3, doneCount: 3 },
+  qaRetryCount: {},
+  reworkStatus: { active: false, attemptCount: 0 },
+  securityHalt: false,
+  lastSafeTag: null,
+  timestamp: "2026-03-24T12:00:00Z",
+  issueNumber: null,
+  issueUrl: null,
+  issueLabels: [],
+  isExistingIssue: false
+};
+
+const DEFAULT_TODO = `# Todo — Fix main-guard hooks (Self-Sealing Pattern)
+
+**Date:** 2026-03-25
+**Tier:** 2 (Standard)
+**Stack:** bash/shell
+
+---
+
+- [ ] task-01: main-guard.sh — state.json 존재 여부 체크 추가 (Self-Sealing)
+      assignee: Worker-A | model: sonnet
+      stack: bash/shell
+      skill: baton-tdd-bash
+      files: [hooks/scripts/main-guard.sh]
+      depends: (none)
+
+- [ ] task-02: main-guard-bash.sh — is_protected_file_write 분리 및 main() 제어 흐름 재구성
+      assignee: Worker-B | model: opus
+      stack: bash/shell
+      skill: baton-tdd-bash
+      files: [hooks/scripts/main-guard-bash.sh]
+      depends: (none)
+
+---
+
+## TDD Review Improvement Items (added by TDD Enforcer)
+
+- [ ] improvement-01: Document RED phase commits in future tasks
+      files: [DEVELOPMENT.md or CLAUDE.md]
+
+- [ ] improvement-02: Add output-content assertions to seal tests
+      files: [hooks/scripts/tests/test-main-guard-seal.sh, hooks/scripts/tests/test-main-guard-bash-seal.sh]
+
+- [ ] improvement-03: Use EXIT trap in test-main-guard-bash-seal.sh for cleanup
+      files: [hooks/scripts/tests/test-main-guard-bash-seal.sh]`;
+
+const DEFAULT_LESSONS = `# Lessons Learned
+
+## 2026-03-24: Phase 1 Security Hardening
+
+### SEC-05 과잉 차단 — state.json 읽기도 차단됨
+- **문제:** main-guard-bash.sh의 grep -q 'state\\.json' 체크가 쓰기뿐 아니라 읽기(cat state.json)도 차단
+- **원인:** 문자열 매칭이 명령 의도(읽기 vs 쓰기)를 구분하지 못함
+- **해결:** commit 55a3ed1, 4357c99에서 수정 완료
+- **Rule:** guard hook 파일명 감지는 따옴표 내 텍스트 제거 후 수행할 것.
+
+### 파이프라인 외부 수동 진행 시 state.json 미갱신
+- **문제:** Agent를 수동으로 스폰하면 state.json을 자동 업데이트하지만, 결과가 반영되지 않는 경우 존재
+- **원인:** worktree hook 실패로 일반 에이전트로 스폰 시 hook 체인이 정상 동작하지 않을 수 있음
+- **Rule:** state.json 수동 갱신 경로 또는 /baton:reset 커맨드 필요
+
+### verify-before-commit.sh + 수동 파이프라인 충돌
+- **문제:** 커밋 가드가 state.json의 phaseFlag만 검사하므로, 수동 진행 시 커밋 불가
+- **Rule:** state.json 수동 업데이트 허용 또는 override 커맨드 추가
+
+## 2026-03-25: Init 차단 문제 일괄 수정
+
+### LESSON-001: main-guard self-sealing 패턴 적용
+- **문제:** init 시 state.json 생성이 무조건 차단됨
+- **원인:** SEC-02 패치의 unconditional block이 init 예외 미고려
+- **해결:** self-sealing 패턴 — 미존재 시 허용, 존재 시 차단 (commit 55a3ed1)
+- **Rule:** state.json 보호는 self-sealing으로 처리. 무조건 차단하지 말 것.
+
+### LESSON-002: guard hook 따옴표 내 텍스트 오탐
+- **문제:** git commit -m "fix: state.json ..." 시 guard가 차단
+- **원인:** 따옴표 안의 텍스트를 파일 참조로 잘못 인식
+- **해결:** strip_quoted_strings() 헬퍼 추가 (commit 4357c99)
+- **Rule:** guard hook 파일명 감지는 따옴표 내 텍스트 제거 후 수행할 것.
+
+### LESSON-003: verify-before-commit init 커밋 차단
+- **문제:** init Step 5 커밋 시 tier=null로 exit 2
+- **해결:** tier=null + phase=idle 조합 예외 허용 (commit 10b04be)
+- **Rule:** init 상태(tier=null + phase=idle)는 커밋 게이트 예외 처리.
+
+### LESSON-004: Worker worktree 로그인 세션 미전달
+- **문제:** worker-agent 스폰 시 "Not logged in" 에러 반복
+- **원인:** agents/worker-agent.md frontmatter isolation: worktree → 세션 미전달
+- **해결:** worktree 격리 제거 (commit cbed05e)
+- **Rule:** worktree 격리는 로그인 세션 전달 문제 해결 전까지 사용하지 말 것.`;
+
+const DEFAULT_COMPLEXITY = `# Complexity Score
+
+**Date:** 2026-03-26
+**Scope:** hooks/scripts/main-guard-bash.sh
+
+## Detected Stack
+
+| Path | Stack | Evidence |
+|------|-------|----------|
+| hooks/scripts/ | bash/shell | *.sh (17 files) |
+| hooks/scripts/state-manager.sh | bash + inline python3 | python3 -c blocks |
+| hooks/scripts/stdin-reader.sh | bash + inline python3 | python3 -c blocks |
+| commands/ | markdown | *.md |
+
+## Complexity Score
+
+| Criterion | Score | Rationale |
+|-----------|-------|-----------|
+| Expected files to change | 2 | main-guard-bash.sh, test file |
+| Cross-service dependency | 0 | Single stack |
+| New feature | 0 | Bug fix |
+| Architectural decisions | 0 | No change needed |
+| Security / auth / payment | 0 | Reduces false positives |
+| DB schema change | 0 | No database |
+
+**Total: 2 pts**
+
+## TIER: 1`;
+
+// ============================================================
+// STATE
+// ============================================================
+let currentState = JSON.parse(JSON.stringify(DEFAULT_STATE));
+let currentTodo = DEFAULT_TODO;
+let currentLessons = DEFAULT_LESSONS;
+let currentComplexity = DEFAULT_COMPLEXITY;
+
+// ============================================================
+// RENDERING
+// ============================================================
+
+const TIER_PHASES = {
+  1: [
+    { key: 'analysis', label: 'Analysis', flag: 'analysisCompleted' },
+    { key: 'worker', label: 'Worker', flag: 'workerCompleted' },
+    { key: 'qa', label: 'QA', flags: ['qaUnitPassed'] },
+    { key: 'done', label: 'Done', computed: true }
+  ],
+  2: [
+    { key: 'issue', label: 'Issue', flag: 'issueRegistered' },
+    { key: 'interview', label: 'Interview', flag: 'interviewCompleted' },
+    { key: 'analysis', label: 'Analysis', flag: 'analysisCompleted' },
+    { key: 'planning', label: 'Planning', flag: 'planningCompleted' },
+    { key: 'taskMgr', label: 'TaskMgr', flag: 'taskMgrCompleted' },
+    { key: 'worker', label: 'Worker', flag: 'workerCompleted' },
+    { key: 'qa', label: 'QA', flags: ['qaUnitPassed', 'qaIntegrationPassed'] },
+    { key: 'review', label: 'Review', flag: 'reviewCompleted', sub: '3 reviewers' },
+    { key: 'done', label: 'Done', computed: true }
+  ],
+  3: [
+    { key: 'issue', label: 'Issue', flag: 'issueRegistered' },
+    { key: 'interview', label: 'Interview', flag: 'interviewCompleted' },
+    { key: 'analysis', label: 'Analysis', flag: 'analysisCompleted' },
+    { key: 'planning', label: 'Planning', flag: 'planningCompleted', sub: '3 planners' },
+    { key: 'taskMgr', label: 'TaskMgr', flag: 'taskMgrCompleted' },
+    { key: 'worker', label: 'Worker', flag: 'workerCompleted' },
+    { key: 'qa', label: 'QA', flags: ['qaUnitPassed', 'qaIntegrationPassed'] },
+    { key: 'review', label: 'Review', flag: 'reviewCompleted', sub: '5 reviewers' },
+    { key: 'done', label: 'Done', computed: true }
+  ]
+};
+
+function getPhaseStatus(phase, state) {
+  if (phase.computed) {
+    // Done = all flags true
+    const allDone = Object.values(state.phaseFlags).every(v => v === true);
+    return allDone ? 'done' : 'pending';
+  }
+  if (state.securityHalt && state.currentPhase === phase.key) return 'failed';
+  if (phase.flags) {
+    const allPassed = phase.flags.every(f => state.phaseFlags[f]);
+    if (allPassed) return 'done';
+  } else if (phase.flag && state.phaseFlags[phase.flag]) {
+    return 'done';
+  }
+  if (state.currentPhase === phase.key) return 'active';
+  return 'pending';
+}
+
+function renderPipeline() {
+  const el = document.getElementById('pipeline-timeline');
+  const tier = currentState.currentTier || 2;
+  const phases = TIER_PHASES[tier] || TIER_PHASES[2];
+  let html = '';
+  phases.forEach((phase, i) => {
+    const status = getPhaseStatus(phase, currentState);
+    const icon = status === 'done' ? '&#10003;' :
+                 status === 'failed' ? '&#10007;' :
+                 status === 'active' ? '&#9679;' : '&#8226;';
+    html += `<div class="phase-node">
+      <div class="phase-circle ${status}">${icon}</div>
+      <div class="phase-label">${phase.label}${phase.sub ? '<br><span style="font-size:9px;color:var(--text-muted)">' + phase.sub + '</span>' : ''}</div>
+    </div>`;
+    if (i < phases.length - 1) {
+      const connDone = status === 'done' ? 'done' : '';
+      html += `<div class="phase-connector ${connDone}"></div>`;
+    }
+  });
+  el.innerHTML = html;
+}
+
+function renderStatusCards() {
+  const el = document.getElementById('status-cards');
+  const s = currentState;
+  const tier = s.currentTier || '--';
+  const tierClass = `tier-${tier}`;
+
+  const phaseName = s.currentPhase ? s.currentPhase.charAt(0).toUpperCase() + s.currentPhase.slice(1) : '--';
+
+  const allDone = Object.values(s.phaseFlags).every(v => v === true);
+  const phaseDisplay = allDone ? 'Done' : phaseName;
+
+  el.innerHTML = `
+    <div class="status-card">
+      <div class="status-card-label">Current Tier</div>
+      <div class="status-card-value"><span class="tier-badge ${tierClass}">Tier ${tier}</span></div>
+      <div class="status-card-sub">${tier === 1 ? 'Light' : tier === 2 ? 'Standard' : tier === 3 ? 'Full' : '--'}</div>
+    </div>
+    <div class="status-card">
+      <div class="status-card-label">Current Phase</div>
+      <div class="status-card-value" style="font-size:22px;">${phaseDisplay}</div>
+      <div class="status-card-sub">Version ${s.version || '--'}</div>
+    </div>
+    <div class="status-card">
+      <div class="status-card-label">Security Status</div>
+      <div class="status-card-value ${s.securityHalt ? 'security-halt' : 'security-clear'}" style="font-size:22px;">
+        ${s.securityHalt ? '&#9888; HALTED' : '&#9678; Clear'}
+      </div>
+      <div class="status-card-sub">${s.securityHalt ? 'Security halt active' : 'No security issues'}</div>
+    </div>
+    <div class="status-card">
+      <div class="status-card-label">Rework Status</div>
+      <div class="status-card-value" style="font-size:22px;color:${s.reworkStatus?.active ? 'var(--accent-yellow)' : 'var(--text-secondary)'}">
+        ${s.reworkStatus?.active ? '&#8635; Active' : '&#10003; None'}
+      </div>
+      <div class="status-card-sub">Attempts: ${s.reworkStatus?.attemptCount || 0}</div>
+    </div>
+    <div class="status-card">
+      <div class="status-card-label">Last Safe Tag</div>
+      <div class="status-card-value" style="font-size:18px;font-family:'SF Mono','Fira Code',monospace;color:${s.lastSafeTag ? 'var(--accent-green)' : 'var(--text-muted)'}">
+        ${s.lastSafeTag || 'None'}
+      </div>
+      <div class="status-card-sub">${s.lastSafeTag ? 'Tagged commit' : 'No safe tag yet'}</div>
+    </div>
+  `;
+}
+
+function renderTrackers() {
+  const el = document.getElementById('tracker-panels');
+  const s = currentState;
+
+  const planCompleted = s.planningTracker?.completed || [];
+  const planExpected = s.planningTracker?.expected || 0;
+  const planPct = planExpected > 0 ? (planCompleted.length / planExpected * 100) : 0;
+
+  const workerDone = s.workerTracker?.doneCount || 0;
+  const workerExpected = s.workerTracker?.expected || 0;
+  const workerPct = workerExpected > 0 ? (workerDone / workerExpected * 100) : 0;
+
+  const revCompleted = s.reviewTracker?.completed || [];
+  const revExpected = s.reviewTracker?.expected || 0;
+  const revPct = revExpected > 0 ? (revCompleted.length / revExpected * 100) : 0;
+
+  function listItems(items, expected) {
+    let html = '';
+    items.forEach(name => {
+      html += `<li><span class="check">&#10003;</span> ${name}</li>`;
+    });
+    for (let i = items.length; i < expected; i++) {
+      html += `<li><span class="pending-dot">&#9675;</span> <span style="color:var(--text-muted)">Pending</span></li>`;
+    }
+    return html;
+  }
+
+  el.innerHTML = `
+    <div class="tracker-panel">
+      <div class="tracker-header">
+        <div class="tracker-title">&#128203; Planning Tracker</div>
+        <div class="tracker-count">${planCompleted.length} / ${planExpected}</div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill ${planPct >= 100 ? 'complete' : ''}" style="width:${planPct}%"></div></div>
+      <ul class="tracker-list">${listItems(planCompleted, planExpected)}</ul>
+    </div>
+    <div class="tracker-panel">
+      <div class="tracker-header">
+        <div class="tracker-title">&#9881; Worker Tracker</div>
+        <div class="tracker-count">${workerDone} / ${workerExpected}</div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill ${workerPct >= 100 ? 'complete' : ''}" style="width:${workerPct}%"></div></div>
+      <div style="text-align:center;margin-top:12px;">
+        <span style="font-size:36px;font-weight:700;color:${workerPct >= 100 ? 'var(--accent-green)' : 'var(--accent-blue)'}">${workerDone}</span>
+        <span style="font-size:14px;color:var(--text-muted)"> / ${workerExpected} tasks completed</span>
+      </div>
+    </div>
+    <div class="tracker-panel">
+      <div class="tracker-header">
+        <div class="tracker-title">&#128269; Review Tracker</div>
+        <div class="tracker-count">${revCompleted.length} / ${revExpected}</div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill ${revPct >= 100 ? 'complete' : ''}" style="width:${revPct}%"></div></div>
+      <ul class="tracker-list">${listItems(revCompleted, revExpected)}</ul>
+    </div>
+  `;
+}
+
+function parseTodoTasks(md) {
+  const tasks = [];
+  const lines = md.split('\n');
+  let i = 0;
+  while (i < lines.length) {
+    const taskMatch = lines[i].match(/^- \[([ xX])\] ((?:task|improvement)-\d+):\s*(.*)/);
+    if (taskMatch) {
+      const done = taskMatch[1] !== ' ';
+      const id = taskMatch[2];
+      const title = taskMatch[3];
+      const isImprovement = id.startsWith('improvement');
+      const meta = {};
+      // Read indented meta lines
+      let j = i + 1;
+      while (j < lines.length && /^\s{4,}/.test(lines[j]) && lines[j].trim() !== '') {
+        const line = lines[j].trim();
+        const kvMatch = line.match(/^(\w+):\s*(.*)/);
+        if (kvMatch) meta[kvMatch[1]] = kvMatch[2];
+        j++;
+      }
+      tasks.push({ done, id, title, isImprovement, meta });
+      i = j;
+    } else {
+      i++;
+    }
+  }
+  return tasks;
+}
+
+function renderTasks() {
+  const el = document.getElementById('task-cards');
+  const tasks = parseTodoTasks(currentTodo);
+  if (tasks.length === 0) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:16px;">No tasks found.</div>';
+    return;
+  }
+  el.innerHTML = tasks.map(t => {
+    const cls = t.done ? 'done' : t.isImprovement ? 'improvement' : '';
+    const statusBadge = t.done ?
+      '<span class="task-status-badge done">Done</span>' :
+      '<span class="task-status-badge pending">Pending</span>';
+    let metaHtml = '';
+    if (t.meta.assignee) {
+      const parts = t.meta.assignee.split('|').map(s => s.trim());
+      parts.forEach(p => {
+        if (p.startsWith('model:')) metaHtml += `<span class="task-tag model">${p}</span>`;
+        else metaHtml += `<span class="task-tag assignee">${p}</span>`;
+      });
+    }
+    if (t.meta.stack) metaHtml += `<span class="task-tag stack">${t.meta.stack}</span>`;
+    if (t.meta.skill) metaHtml += `<span class="task-tag">${t.meta.skill}</span>`;
+
+    const filesStr = t.meta.files || '';
+    const filesClean = filesStr.replace(/[\[\]]/g, '');
+
+    return `<div class="task-card ${cls}">
+      <div class="task-card-header">
+        <span class="task-id">${t.id}</span>
+        ${statusBadge}
+      </div>
+      <div class="task-title">${t.title}</div>
+      <div class="task-meta">${metaHtml}</div>
+      ${filesClean ? `<div class="task-files">&#128196; ${filesClean}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function parseLessons(md) {
+  const lessons = [];
+  const sections = md.split(/^## /m).filter(s => s.trim());
+  sections.forEach(section => {
+    const dateMatch = section.match(/^([\d-]+):\s*(.*)/);
+    if (!dateMatch) return;
+    const date = dateMatch[1];
+    const sectionTitle = dateMatch[2];
+    const entries = section.split(/^### /m).filter(s => s.trim());
+    entries.slice(1).forEach(entry => {
+      const entryLines = entry.split('\n');
+      const title = entryLines[0].trim();
+      let problem = '', cause = '', solution = '', rule = '';
+      entryLines.forEach(line => {
+        const l = line.trim();
+        if (l.startsWith('- **문제:**') || l.startsWith('- **Problem:**')) problem = l.replace(/^- \*\*[^*]+\*\*\s*/, '');
+        if (l.startsWith('- **원인:**') || l.startsWith('- **Cause:**')) cause = l.replace(/^- \*\*[^*]+\*\*\s*/, '');
+        if (l.startsWith('- **해결:**') || l.startsWith('- **Solution:**')) solution = l.replace(/^- \*\*[^*]+\*\*\s*/, '');
+        if (l.startsWith('- **수정 방향:**')) solution = solution || l.replace(/^- \*\*[^*]+\*\*\s*/, '');
+        if (l.startsWith('- **Rule:**')) rule = l.replace(/^- \*\*Rule:\*\*\s*/, '');
+      });
+      lessons.push({ date, sectionTitle, title, problem, cause, solution, rule });
+    });
+  });
+  return lessons;
+}
+
+function renderLessons() {
+  const el = document.getElementById('lessons-list');
+  const lessons = parseLessons(currentLessons);
+  if (lessons.length === 0) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:16px;">No lessons found.</div>';
+    return;
+  }
+  el.innerHTML = lessons.map((l, i) => `
+    <div class="lesson-entry">
+      <div class="lesson-header" onclick="toggleLesson(${i})">
+        <div class="lesson-header-left">
+          <span class="lesson-toggle" id="toggle-${i}">&#9654;</span>
+          <span class="lesson-title">${l.title}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="lesson-date">${l.date}</span>
+          <span class="severity-badge severity-medium">${l.sectionTitle.substring(0, 20)}</span>
+        </div>
+      </div>
+      <div class="lesson-body" id="lesson-body-${i}">
+        ${l.problem ? `<div class="lesson-field"><div class="lesson-field-label">Problem</div><div class="lesson-field-value">${l.problem}</div></div>` : ''}
+        ${l.cause ? `<div class="lesson-field"><div class="lesson-field-label">Cause</div><div class="lesson-field-value">${l.cause}</div></div>` : ''}
+        ${l.solution ? `<div class="lesson-field"><div class="lesson-field-label">Solution</div><div class="lesson-field-value">${l.solution}</div></div>` : ''}
+        ${l.rule ? `<div class="lesson-rule">&#9888; Rule: ${l.rule}</div>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleLesson(i) {
+  const body = document.getElementById(`lesson-body-${i}`);
+  const toggle = document.getElementById(`toggle-${i}`);
+  body.classList.toggle('open');
+  toggle.classList.toggle('open');
+}
+
+function parseComplexity(md) {
+  const result = { scores: [], stacks: [], total: 0, tier: '--' };
+
+  // Parse score table
+  const scoreTableMatch = md.match(/\| Criterion \| Score \| Rationale \|\n\|[-|]+\|\n([\s\S]*?)(?:\n\n|\*\*Total)/);
+  if (scoreTableMatch) {
+    const rows = scoreTableMatch[1].trim().split('\n');
+    rows.forEach(row => {
+      const cols = row.split('|').map(c => c.trim()).filter(c => c);
+      if (cols.length >= 3) {
+        result.scores.push({ criterion: cols[0], score: parseInt(cols[1]) || 0, rationale: cols[2] });
+      }
+    });
+  }
+
+  const totalMatch = md.match(/\*\*Total:\s*(\d+)\s*pts?\*\*/);
+  if (totalMatch) result.total = parseInt(totalMatch[1]);
+
+  const tierMatch = md.match(/##\s*TIER:\s*(\d+)/);
+  if (tierMatch) result.tier = tierMatch[1];
+
+  // Parse stack table
+  const stackTableMatch = md.match(/\| Path \| Stack \| Evidence[^\n]*\|\n\|[-|]+\|\n([\s\S]*?)(?:\n\n|\n##|\n\*\*)/);
+  if (stackTableMatch) {
+    const rows = stackTableMatch[1].trim().split('\n');
+    rows.forEach(row => {
+      const cols = row.split('|').map(c => c.trim()).filter(c => c);
+      if (cols.length >= 3) {
+        result.stacks.push({ path: cols[0], stack: cols[1], evidence: cols[2] });
+      }
+    });
+  }
+
+  return result;
+}
+
+function renderComplexity() {
+  const el = document.getElementById('complexity-grid');
+  const data = parseComplexity(currentComplexity);
+
+  const maxScore = 3;
+  const radarHtml = `<div class="radar-container"><canvas id="radar-canvas" width="280" height="280"></canvas></div>`;
+
+  const scoreRows = data.scores.map(s =>
+    `<tr><td>${s.criterion}</td><td style="color:${s.score > 0 ? 'var(--accent-yellow)' : 'var(--text-muted)'}">${s.score}</td><td style="color:var(--text-secondary);font-size:12px;">${s.rationale}</td></tr>`
+  ).join('');
+
+  const stackRows = data.stacks.map(s =>
+    `<tr><td class="stack-tag-cell">${s.path}</td><td>${s.stack}</td><td style="color:var(--text-muted);font-size:12px;">${s.evidence}</td></tr>`
+  ).join('');
+
+  el.innerHTML = `
+    <div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <h3 style="font-size:15px;font-weight:600;">Score Breakdown</h3>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span class="score-total">Total: ${data.total} pts</span>
+          <span class="tier-badge tier-${data.tier}">Tier ${data.tier}</span>
+        </div>
+      </div>
+      <table class="score-table">
+        <thead><tr><th>Criterion</th><th>Score</th><th>Rationale</th></tr></thead>
+        <tbody>${scoreRows}</tbody>
+      </table>
+      ${radarHtml}
+    </div>
+    <div>
+      <h3 style="font-size:15px;font-weight:600;margin-bottom:16px;">Detected Stacks</h3>
+      <table class="stack-table">
+        <thead><tr><th>Path</th><th>Stack</th><th>Evidence</th></tr></thead>
+        <tbody>${stackRows}</tbody>
+      </table>
+    </div>
+  `;
+
+  // Draw radar chart
+  setTimeout(() => drawRadar(data.scores), 50);
+}
+
+function drawRadar(scores) {
+  const canvas = document.getElementById('radar-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const cx = 140, cy = 140, r = 100;
+  const n = scores.length;
+  if (n < 3) return;
+
+  ctx.clearRect(0, 0, 280, 280);
+
+  // Draw grid
+  for (let ring = 1; ring <= 3; ring++) {
+    const rr = r * ring / 3;
+    ctx.beginPath();
+    for (let i = 0; i <= n; i++) {
+      const angle = (Math.PI * 2 * i / n) - Math.PI / 2;
+      const x = cx + rr * Math.cos(angle);
+      const y = cy + rr * Math.sin(angle);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = 'rgba(42, 63, 82, 0.6)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // Draw axes
+  for (let i = 0; i < n; i++) {
+    const angle = (Math.PI * 2 * i / n) - Math.PI / 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + r * Math.cos(angle), cy + r * Math.sin(angle));
+    ctx.strokeStyle = 'rgba(42, 63, 82, 0.4)';
+    ctx.stroke();
+
+    // Labels
+    const lx = cx + (r + 18) * Math.cos(angle);
+    const ly = cy + (r + 18) * Math.sin(angle);
+    ctx.fillStyle = '#8899aa';
+    ctx.font = '9px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const label = scores[i].criterion.length > 12 ? scores[i].criterion.substring(0, 12) + '..' : scores[i].criterion;
+    ctx.fillText(label, lx, ly);
+  }
+
+  // Draw data polygon
+  ctx.beginPath();
+  const maxVal = 3;
+  for (let i = 0; i <= n; i++) {
+    const idx = i % n;
+    const val = Math.min(scores[idx].score, maxVal);
+    const pct = val / maxVal;
+    const angle = (Math.PI * 2 * idx / n) - Math.PI / 2;
+    const x = cx + r * pct * Math.cos(angle);
+    const y = cy + r * pct * Math.sin(angle);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(59, 130, 246, 0.2)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(59, 130, 246, 0.8)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Draw data points
+  for (let i = 0; i < n; i++) {
+    const val = Math.min(scores[i].score, maxVal);
+    const pct = val / maxVal;
+    const angle = (Math.PI * 2 * i / n) - Math.PI / 2;
+    const x = cx + r * pct * Math.cos(angle);
+    const y = cy + r * pct * Math.sin(angle);
+    ctx.beginPath();
+    ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.fillStyle = val > 0 ? '#3b82f6' : '#3a4a5c';
+    ctx.fill();
+    ctx.strokeStyle = val > 0 ? '#60a5fa' : '#3a4a5c';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+}
+
+function renderTimestamp() {
+  const ts = currentState.timestamp;
+  if (ts) {
+    const d = new Date(ts);
+    document.getElementById('timestamp').textContent = 'Data: ' + d.toLocaleString();
+  } else {
+    document.getElementById('timestamp').textContent = 'Data: --';
+  }
+}
+
+function renderAll() {
+  renderPipeline();
+  renderStatusCards();
+  renderTrackers();
+  renderTasks();
+  renderLessons();
+  renderComplexity();
+  renderTimestamp();
+}
+
+// ============================================================
+// FILE LOADING
+// ============================================================
+
+function showToast(msg, isError) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.className = 'toast' + (isError ? ' error' : '');
+  setTimeout(() => toast.classList.add('show'), 10);
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+function handleFileSelect(input, type) {
+  const file = input.files[0];
+  if (!file) return;
+  loadFile(file, type);
+  input.value = '';
+}
+
+function loadFile(file, type) {
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const content = e.target.result;
+    try {
+      if (type === 'state') {
+        currentState = JSON.parse(content);
+        showToast('state.json loaded successfully');
+      } else if (type === 'todo') {
+        currentTodo = content;
+        showToast('todo.md loaded successfully');
+      } else if (type === 'lessons') {
+        currentLessons = content;
+        showToast('lessons.md loaded successfully');
+      } else if (type === 'complexity') {
+        currentComplexity = content;
+        showToast('complexity-score.md loaded successfully');
+      }
+      renderAll();
+    } catch (err) {
+      showToast('Error parsing file: ' + err.message, true);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function detectFileType(name) {
+  if (name === 'state.json' || name.endsWith('state.json')) return 'state';
+  if (name.includes('todo')) return 'todo';
+  if (name.includes('lesson')) return 'lessons';
+  if (name.includes('complexity') || name.includes('score')) return 'complexity';
+  if (name.endsWith('.json')) return 'state';
+  return null;
+}
+
+// Drag and drop
+const dropZone = document.getElementById('drop-zone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const files = e.dataTransfer.files;
+  for (let i = 0; i < files.length; i++) {
+    const type = detectFileType(files[i].name);
+    if (type) {
+      loadFile(files[i], type);
+    } else {
+      showToast('Unknown file type: ' + files[i].name, true);
+    }
+  }
+});
+
+// ============================================================
+// CONNECTION STATUS
+// ============================================================
+let isLive = false;
+let hadConnection = false;
+
+function setConnectionStatus(status) {
+  const dot = document.getElementById('conn-dot');
+  const label = document.getElementById('conn-label');
+  if (status === 'live') {
+    dot.style.background = 'var(--accent-green)';
+    label.textContent = 'Live';
+    label.style.color = 'var(--accent-green)';
+    isLive = true; hadConnection = true;
+  } else if (status === 'offline') {
+    dot.style.background = 'var(--accent-yellow)';
+    label.textContent = 'Offline';
+    label.style.color = 'var(--accent-yellow)';
+    isLive = false;
+  } else if (status === 'error') {
+    dot.style.background = 'var(--accent-red)';
+    label.textContent = 'Error';
+    label.style.color = 'var(--accent-red)';
+    isLive = false;
+  }
+}
+
+// ============================================================
+// LIVE FETCH
+// ============================================================
+async function fetchAndRender() {
+  try {
+    const [stateRes, todoRes, lessonsRes, complexityRes] = await Promise.allSettled([
+      fetch('/api/state'),
+      fetch('/api/todo'),
+      fetch('/api/lessons'),
+      fetch('/api/complexity'),
+    ]);
+
+    let anyOk = false;
+
+    if (stateRes.status === 'fulfilled' && stateRes.value.ok) {
+      try { currentState = await stateRes.value.json(); anyOk = true; } catch (_) {}
+    }
+    if (todoRes.status === 'fulfilled' && todoRes.value.ok) {
+      currentTodo = await todoRes.value.text(); anyOk = true;
+    }
+    if (lessonsRes.status === 'fulfilled' && lessonsRes.value.ok) {
+      currentLessons = await lessonsRes.value.text(); anyOk = true;
+    }
+    if (complexityRes.status === 'fulfilled' && complexityRes.value.ok) {
+      currentComplexity = await complexityRes.value.text(); anyOk = true;
+    }
+
+    if (anyOk) {
+      setConnectionStatus('live');
+    } else if (hadConnection) {
+      setConnectionStatus('error');
+    }
+
+    renderAll();
+  } catch (err) {
+    // Network error — server not reachable
+    if (hadConnection) {
+      setConnectionStatus('error');
+    } else {
+      setConnectionStatus('offline');
+      showToast('\u26A0 Running in offline mode \u2014 drag & drop files to update');
+    }
+    renderAll();
+  }
+}
+
+// ============================================================
+// AUTO-REFRESH (20s)
+// ============================================================
+let autoRefreshTimer = null;
+
+function toggleAutoRefresh() {
+  const btn = document.getElementById('auto-refresh-btn');
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
+    btn.innerHTML = '&#9654; Auto 20s';
+    btn.style.background = '';
+    showToast('Auto-refresh stopped');
+  } else {
+    autoRefreshTimer = setInterval(fetchAndRender, 20000);
+    btn.innerHTML = '&#9724; Auto 20s';
+    btn.style.background = 'var(--accent-green)';
+    showToast('Auto-refresh every 20s');
+  }
+}
+
+// ============================================================
+// INIT
+// ============================================================
+renderAll();
+fetchAndRender();
+toggleAutoRefresh();
+</script>
+</body>
+</html>
