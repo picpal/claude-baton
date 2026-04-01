@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Main Guard Bash Hook
-# Main Agent가 Bash를 통해 코드 파일을 수정하는 것을 차단합니다.
+# Main Agent의 위험한 파일 쓰기 명령만 차단합니다 (블랙리스트 방식)
 # PreToolUse Hook (Bash 매처)
 #
 # 핵심 로직:
 # - Subagent 스택이 비어있으면 = Main Agent가 직접 호출
-# - .baton/ 파일 외 코드 파일에 대한 쓰기 명령 차단
-# - 읽기 전용 명령은 허용
+# - .agent-stack / state.json 쓰기 차단
+# - is_dangerous_write() 패턴만 차단, 나머지는 모두 허용
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/find-baton-root.sh"
@@ -322,13 +322,7 @@ main() {
     exit 0
   fi
 
-  # Safe command whitelist check
-  if is_safe_command "$command"; then
-    log "PASSED: Safe command"
-    exit 0
-  fi
-
-  # Dangerous write pattern check
+  # Dangerous write pattern check (blacklist)
   if is_dangerous_write "$command"; then
     local truncated="${command:0:100}"
     log "BLOCKED: Dangerous bash command: $truncated"
@@ -337,9 +331,9 @@ main() {
     exit 2
   fi
 
-  local truncated="${command:0:100}"
-  log "BLOCKED: Command not in safe whitelist"
-  block "⛔ [R01] Bash blocked: $truncated — delegate to Worker agent for file modifications."
+  # Default: allow everything else
+  log "PASSED: No dangerous pattern detected"
+  exit 0
 }
 
 main
