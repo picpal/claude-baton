@@ -333,6 +333,58 @@ git commit -m "chore(claude-baton): init pipeline"
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+## Re-initialize (pipeline status reset only)
+
+`/baton:init` can be used both for **first-time setup** and for **resetting pipeline status** without losing artifacts.
+
+If `.baton/state.json` already exists and you want to reset the pipeline to idle (e.g., pipeline is stuck, done, or a fresh cycle is needed) **without deleting any artifacts**, run these steps instead of the full init:
+
+### Step R1. Reset state.json to idle
+
+Invoke `state_init` to reinitialize the state file:
+
+```bash
+source hooks/scripts/state-manager.sh && state_init
+```
+
+`state_init` already handles re-initialization — it overwrites `state.json` with a clean idle state without requiring a prior `rm`.
+
+### Step R2. Clear statusline cache
+
+```bash
+rm -f .baton/logs/.last-prompt-phase
+```
+
+### Step R3. Clear agent stack
+
+```bash
+rm -f .baton/logs/.agent-stack
+```
+
+### What is preserved
+
+All pipeline artifacts are left untouched:
+- `.baton/plan.md`
+- `.baton/todo.md`
+- `.baton/complexity-score.md`
+- `.baton/review-report.md`
+- `.baton/lessons.md`
+- `.baton/security-constraints.md`
+- `.baton/logs/` (audit trail)
+- `.baton/reports/` (historical records)
+
+### Confirm
+
+```
+Pipeline re-initialized.
+  State: idle
+  Artifacts: preserved
+
+Ready for a new pipeline cycle.
+```
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 ## Step 5.5. Configure statusline integration
 
 Set up the baton pipeline progress display in the Claude Code statusline.
