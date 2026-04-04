@@ -277,15 +277,17 @@ handle_planning_stop() {
 }
 
 # -------------------------------------------------------------------
-# Handle task manager completion — set workerTracker.expected from todo.md
+# Handle task manager completion — set workerTracker.expected from output marker
 # -------------------------------------------------------------------
 handle_taskmgr_stop() {
   state_write "phaseFlags.taskMgrCompleted" "true"
 
-  local todo_file="$BATON_DIR/todo.md"
-  if [ -f "$todo_file" ]; then
-    local count
-    count=$(grep -c '^- \[ \] task-' "$todo_file" 2>/dev/null || echo "0")
+  local output
+  output=$(get_agent_output)
+
+  local count
+  count=$(echo "$output" | grep -oE 'WORKER_COUNT:[0-9]+' | head -1 | cut -d: -f2)
+  if [ -n "$count" ] && [ "$count" -gt 0 ] 2>/dev/null; then
     state_write "workerTracker.expected" "$count"
     state_write "workerTracker.doneCount" "0"
   fi

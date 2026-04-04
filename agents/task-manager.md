@@ -95,4 +95,9 @@ After writing todo.md and registering all tasks via TaskCreate, update the GitHu
    ```
 4. If `gh` command fails, log warning and continue (non-blocking)
 
-<!-- workerTracker.expected는 agent-logger.sh SubagentStop 훅이 todo.md에서 자동 카운팅하여 설정 — 수동 설정 불필요 -->
+## Output Marker (Required)
+At the end of your output, include the worker count marker:
+```
+WORKER_COUNT:{N}
+```
+Where `{N}` is the total number of tasks created. This is parsed by the SubagentStop hook to set `workerTracker.expected` in state.json.
