@@ -12,6 +12,19 @@ Reset the claude-baton pipeline state for a fresh cycle.
 - Pipeline is stuck (agent crashed, state inconsistent)
 - User wants to abandon current pipeline and start over
 
+## When NOT to Use — Session Resume
+If the pipeline was interrupted (context limit, session timeout, crash) and you want to
+**continue the same work**, do NOT reset. Instead:
+
+1. state.json persists across sessions — the pipeline state is already saved
+2. Read `.baton/state.json` to check `currentPhase` and `phaseFlags`
+3. Read `.baton/todo.md` to check task progress
+4. Resume from the interrupted phase — phase-gate will skip completed phases automatically
+
+Example: if `workerCompleted=false` and `doneCount=3/5`, spawn workers for the remaining 2 tasks.
+
+**Reset erases all progress. Resume preserves it.**
+
 ## Behavior
 
 ### Step 1. Reset state.json
