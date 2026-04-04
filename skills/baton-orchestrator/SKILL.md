@@ -44,6 +44,20 @@ Use `scripts/score.sh` for automated calculation.
 - The only interactive phase is **Interview** (waits for user responses).
 - Exceptions requiring user input: Security Rollback (R04/R05), Tier 3 Planning conflicts (R10), checkpoint restore, stack detection failure (R11).
 
+## State Management
+- The orchestrator **MUST** update `.baton/state.json` directly via Bash — NEVER output echo commands for the user to run manually.
+- state.json updates are operational bookkeeping, NOT code. The "no code" rule does not apply. The orchestrator has full permission to write to `.baton/` paths.
+- Usage pattern:
+```bash
+source hooks/scripts/state-manager.sh && state_write "fieldName" "value"
+```
+- Common phase transition updates:
+```bash
+source hooks/scripts/state-manager.sh && state_set_phase "review"
+source hooks/scripts/state-manager.sh && state_write "phaseFlags.qaUnitPassed" "true"
+source hooks/scripts/state-manager.sh && state_write "phaseFlags.reviewCompleted" "true"
+```
+
 ## Pipeline Resume (Session Interrupted)
 When `currentPhase` is not `idle` or `done` at session start, a previous pipeline was interrupted.
 Do NOT reset — resume from the interrupted phase:

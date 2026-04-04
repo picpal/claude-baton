@@ -26,7 +26,7 @@ Issue Registration
 - Main Orchestrator invokes baton-issue-register skill
 - Auto-create GitHub Issue or link existing one (#N)
 - Auto-label based on request keywords (bug, enhancement, refactor, documentation)
-- Record in .baton/issue.md and state.json
+- Record in .baton/issue.md and update state.json via `state_write()`
 - If gh CLI unavailable: graceful skip, pipeline continues
 
 ## Phase 3: Planning (3 Parallel Planners)

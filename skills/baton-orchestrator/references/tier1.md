@@ -7,7 +7,7 @@ Score 0–3 pts. Simple, isolated changes with minimal risk.
 - Triggered only when request contains bug/fix keywords (버그, bug, fix, 수정, 오류, error, 에러)
 - Auto-create GitHub Issue or link existing one (#N)
 - Auto-label as `bug`
-- Record in .baton/issue.md and state.json
+- Record in .baton/issue.md and update state.json via `state_write()`
 - If not a bug/fix request, this phase is skipped entirely
 
 ## Pipeline Flow
