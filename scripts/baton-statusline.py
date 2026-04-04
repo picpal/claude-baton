@@ -140,11 +140,17 @@ def render_baton_line(project_dir: str) -> str:
             state = json.load(fh)
 
         tier = state.get("currentTier")
-        if tier is None:
-            return ""
-
         raw_phase = state.get("currentPhase", "")
         if raw_phase == "idle":
+            return ""
+
+        # Before tier is determined (analysis in progress), show minimal pipeline
+        if tier is None:
+            if raw_phase in ("analysis", "issue-register"):
+                current_phase = _normalise_phase(raw_phase)
+                anl_token = style("◈anl", CYAN_BOLD)
+                pending = style("━", DIM) + style("○···", DIM)
+                return f" T? {anl_token}{pending}"
             return ""
 
         current_phase = _normalise_phase(raw_phase)
