@@ -155,11 +155,30 @@ strip_quoted_strings() {
   echo "$1" | sed -E "s/\"[^\"]*\"//g; s/'[^']*'//g"
 }
 
+# Remove heredoc body content, preserving command lines with << markers.
+# Handles <<EOF, <<'EOF', <<"EOF", <<-EOF variants.
+strip_heredoc_bodies() {
+  echo "$1" | awk '
+    /<<-?'\''?"?[A-Za-z_][A-Za-z_0-9]*'\''?"?/ {
+      delim=$0
+      sub(/.*<<-?'\''?"?/, "", delim)
+      sub(/[^A-Za-z_0-9].*/, "", delim)
+      if (delim != "") { in_heredoc=1; heredoc_delim=delim; print; next }
+    }
+    in_heredoc && $0 == heredoc_delim { in_heredoc=0; next }
+    !in_heredoc { print }
+  '
+}
+
 # .agent-stack write detection — ALWAYS blocked, no exceptions
+# Heredoc bodies and quoted strings are stripped before presence check
+# to avoid false positives from commit messages or documentation text.
 is_agent_stack_write() {
   local cmd="$1"
+  local no_heredoc
+  no_heredoc=$(strip_heredoc_bodies "$cmd")
   local stripped
-  stripped=$(strip_quoted_strings "$cmd")
+  stripped=$(strip_quoted_strings "$no_heredoc")
   # Does command reference .agent-stack at all? (anchored: must be at path boundary)
   # Use stripped string so quoted mentions (e.g. commit messages) are ignored.
   echo "$stripped" | grep -qE '(^|[[:space:]/])\.agent-stack([[:space:]]|$)' || return 1
