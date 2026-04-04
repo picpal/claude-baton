@@ -366,6 +366,38 @@ handle_qa_integration_stop() {
 }
 
 # -------------------------------------------------------------------
+# Activate rework mode if any reviewer reported warnings
+# Resets worker/QA/review flags so pipeline re-enters worker phase
+# -------------------------------------------------------------------
+activate_rework_if_needed() {
+  local has_warnings
+  has_warnings=$(state_read "reworkStatus.hasWarnings")
+  [ "$has_warnings" != "true" ] && return 0
+
+  state_write "reworkStatus.active" "true"
+  local attempt
+  attempt=$(state_read "reworkStatus.attemptCount")
+  attempt=$((${attempt:-0} + 1))
+  state_write "reworkStatus.attemptCount" "$attempt"
+
+  # Reset flags to re-enter worker→QA→review cycle
+  state_write "phaseFlags.workerCompleted" "false"
+  state_write "phaseFlags.qaUnitPassed" "false"
+  state_write "phaseFlags.qaIntegrationPassed" "false"
+  state_write "phaseFlags.reviewCompleted" "false"
+  state_write "workerTracker.doneCount" "0"
+  # Reset reviewTracker.completed to empty array and clear hasWarnings
+  python3 -c "
+import json, sys
+f = sys.argv[1]
+with open(f) as fh: d = json.load(fh)
+d['reviewTracker']['completed'] = []
+d['reworkStatus']['hasWarnings'] = False
+with open(f, 'w') as fh: json.dump(d, fh, indent=2, ensure_ascii=False)
+" "$STATE_FILE"
+}
+
+# -------------------------------------------------------------------
 # Handle review agent completion
 # -------------------------------------------------------------------
 handle_review_stop() {
@@ -375,8 +407,20 @@ handle_review_stop() {
   completed_len=$(state_array_len "reviewTracker.completed")
   expected=$(state_read "reviewTracker.expected")
 
+  # Detect warnings in review output
+  local output
+  output=$(hook_get_field "tool_response.content" 2>/dev/null || echo "")
+  if [ -z "$output" ]; then
+    output=$(hook_get_field "tool_response" 2>/dev/null || echo "")
+  fi
+  if echo "$output" | grep -qiE '(WARNING|WARN|경고|개선.?필요|rework.?required)'; then
+    state_write "reworkStatus.hasWarnings" "true"
+  fi
+
   if [ "$expected" != "null" ] && [ "$expected" != "0" ] && [ "$completed_len" -ge "$expected" ] 2>/dev/null; then
     state_write "phaseFlags.reviewCompleted" "true"
+    # Check if rework needed after all reviewers completed
+    activate_rework_if_needed
   fi
 }
 
