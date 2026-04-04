@@ -41,11 +41,39 @@ if [ -f "$LAST_PHASE_FILE" ]; then
   LAST_PHASE=$(cat "$LAST_PHASE_FILE" 2>/dev/null)
 fi
 
+# Read tracker progress for current phase
+TRACKER_PROGRESS=""
+if [ -f "$BATON_DIR/state.json" ]; then
+  case "$PHASE" in
+    review)
+      R_DONE=$(state_array_len "reviewTracker.completed" 2>/dev/null || echo "0")
+      R_EXPECTED=$(state_read "reviewTracker.expected" 2>/dev/null || echo "0")
+      [ "$R_EXPECTED" != "null" ] && [ "$R_EXPECTED" != "0" ] && TRACKER_PROGRESS="rev(${R_DONE}/${R_EXPECTED})"
+      ;;
+    worker)
+      W_DONE=$(state_read "workerTracker.doneCount" 2>/dev/null || echo "0")
+      W_EXPECTED=$(state_read "workerTracker.expected" 2>/dev/null || echo "0")
+      [ "$W_EXPECTED" != "null" ] && [ "$W_EXPECTED" != "0" ] && TRACKER_PROGRESS="wrk(${W_DONE}/${W_EXPECTED})"
+      ;;
+    planning)
+      P_DONE=$(state_array_len "planningTracker.completed" 2>/dev/null || echo "0")
+      P_EXPECTED=$(state_read "planningTracker.expected" 2>/dev/null || echo "0")
+      [ "$P_EXPECTED" != "null" ] && [ "$P_EXPECTED" != "0" ] && TRACKER_PROGRESS="pln(${P_DONE}/${P_EXPECTED})"
+      ;;
+  esac
+fi
+
+if [ -n "$TRACKER_PROGRESS" ]; then
+  PROGRESS_DISPLAY="${TRACKER_PROGRESS}|${DONE}/${TOTAL}"
+else
+  PROGRESS_DISPLAY="${DONE}/${TOTAL}"
+fi
+
 if [ "$LAST_PHASE" = "$PHASE" ]; then
   # Same phase — output 1-line summary only
   cat <<EOF
 <user-prompt-submit-hook>
-[Baton] T:${TIER}|P:${PHASE}|${DONE}/${TOTAL}
+[Baton] T:${TIER}|P:${PHASE}|${PROGRESS_DISPLAY}
 </user-prompt-submit-hook>
 EOF
 else
@@ -54,7 +82,7 @@ else
   printf '%s' "$PHASE" > "$LAST_PHASE_FILE"
   cat <<EOF
 <user-prompt-submit-hook>
-[Baton] Tier: ${TIER} | Phase: ${PHASE} | Tasks: ${DONE}/${TOTAL}
+[Baton] Tier: ${TIER} | Phase: ${PHASE} | Tasks: ${PROGRESS_DISPLAY}
 
 Intent 분류 후 행동:
 A) NEW_TASK — 새 개발 요청 → Analysis Agent 즉시 스폰 (state를 idle로 리셋)

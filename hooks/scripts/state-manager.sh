@@ -254,6 +254,39 @@ with open(state_file, 'w') as f:
   fi
 }
 
+state_array_len() {
+  local field="$1"
+
+  if [ ! -f "$STATE_FILE" ]; then
+    echo "0"
+    return 0
+  fi
+
+  BATON_STATE_FILE="$STATE_FILE" BATON_FIELD="$field" python3 -c "
+import json, sys, os
+
+state_file = os.environ['BATON_STATE_FILE']
+field = os.environ['BATON_FIELD']
+
+with open(state_file, 'r') as f:
+    data = json.load(f)
+
+keys = field.split('.')
+val = data
+for k in keys:
+    if isinstance(val, dict) and k in val:
+        val = val[k]
+    else:
+        print('0')
+        sys.exit(0)
+
+if isinstance(val, list):
+    print(len(val))
+else:
+    print('0')
+" 2>/dev/null || echo "0"
+}
+
 state_get_tier() {
   state_read "currentTier"
 }
