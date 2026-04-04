@@ -1,5 +1,7 @@
+.baton/
 .pipeline/logs/
 .pipeline/reports/
+__pycache__/
 *.ko.md
 !README.ko.md
 simulation/
