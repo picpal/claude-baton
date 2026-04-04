@@ -111,7 +111,7 @@ with open(path, 'r+') as f:
     s = json.load(f)
     s['workerTracker']['expected'] = TASK_COUNT  # replace with actual count
     s['workerTracker']['doneCount'] = 0
-    mode = os.stat(path).st_mode
+    mode = os.stat(path).st_mode & 0o777
     fd, tmp = tempfile.mkstemp(dir='.baton', suffix='.tmp')
     try:
         os.fchmod(fd, mode)

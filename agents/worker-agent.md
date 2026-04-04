@@ -68,7 +68,7 @@ with open(path, 'r+') as f:
     fcntl.flock(f, fcntl.LOCK_EX)
     s = json.load(f)
     s['workerTracker']['doneCount'] = s['workerTracker'].get('doneCount',0) + 1
-    mode = os.stat(path).st_mode
+    mode = os.stat(path).st_mode & 0o777
     fd, tmp = tempfile.mkstemp(dir='.baton', suffix='.tmp')
     try:
         os.fchmod(fd, mode)
