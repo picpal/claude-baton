@@ -245,6 +245,7 @@ handle_analysis_stop() {
       1)
         state_write "planningTracker.expected" "0"
         state_write "reviewTracker.expected" "0"
+        state_write "workerTracker.expected" "1"
         # Tier 1 skips: interview, planning, taskmgr, integration QA, review
         local issue_reg
         issue_reg=$(state_read "phaseFlags.issueRegistered")
@@ -260,10 +261,12 @@ handle_analysis_stop() {
       2)
         state_write "planningTracker.expected" "1"
         state_write "reviewTracker.expected" "3"
+        state_write "workerTracker.expected" "1"
         ;;
       3)
         state_write "planningTracker.expected" "3"
         state_write "reviewTracker.expected" "5"
+        state_write "workerTracker.expected" "1"
         ;;
     esac
   fi
