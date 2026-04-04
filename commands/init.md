@@ -333,6 +333,59 @@ git commit -m "chore(claude-baton): init pipeline"
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+## Step 5.5. Configure statusline integration
+
+Set up the baton pipeline progress display in the Claude Code statusline.
+
+1. Read `~/.claude/plugins/installed_plugins.json` and find the `installPath`
+   for the `claude-baton@claude-baton` plugin entry.
+
+2. Write `~/.claude/baton-statusline-path.txt` with the content:
+   ```
+   {installPath}/scripts/baton-statusline.py
+   ```
+
+3. If `~/.claude/statusline-command.py` exists:
+   - Check if it already contains the string `baton_sl`
+   - If NOT found, insert the baton integration block before the final `print(SEP.join(segments))` line:
+     ```python
+     # --- Baton pipeline (Line 1) ---
+     baton_line = ""
+     try:
+         if project_dir:
+             state_path = os.path.join(project_dir, ".baton", "state.json")
+             if os.path.isfile(state_path):
+                 path_file = os.path.expanduser("~/.claude/baton-statusline-path.txt")
+                 if os.path.isfile(path_file):
+                     with open(path_file) as pf:
+                         module_path = pf.read().strip()
+                     if os.path.isfile(module_path):
+                         import importlib.util
+                         spec = importlib.util.spec_from_file_location("baton_sl", module_path)
+                         mod = importlib.util.module_from_spec(spec)
+                         spec.loader.exec_module(mod)
+                         baton_line = mod.render_baton_line(project_dir)
+     except Exception:
+         pass
+
+     if baton_line:
+         print(baton_line)
+     ```
+   - If already contains `baton_sl`, skip (already configured)
+
+4. If `~/.claude/statusline-command.py` does NOT exist, skip this step.
+
+5. Verify `~/.claude/settings.json` contains a `statusLine` configuration.
+   If not present, add:
+   ```json
+   "statusLine": {
+     "type": "command",
+     "command": "python3 ~/.claude/statusline-command.py"
+   }
+   ```
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 ## Step 6. Completion report
 
 Output the following format.
@@ -348,6 +401,7 @@ Created files:
   CLAUDE.md              — rules (R01~R12) + orchestrator instructions
   .claude/settings.json  — project-level hooks (4 events)
   .baton/                — artifact store (8 files)
+  ~/.claude/baton-statusline-path.txt  — statusline module path reference
 
 Stack detection: auto on first development request
 No need to specify tech stacks manually.
