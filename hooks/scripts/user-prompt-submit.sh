@@ -58,7 +58,10 @@ else
 
 Intent 분류 후 행동:
 A) NEW_TASK — 새 개발 요청 → Analysis Agent 즉시 스폰 (state를 idle로 리셋)
-B) CONTINUE — 파이프라인 재개 → 다음 대기 중 phase 진행
+B) CONTINUE — 파이프라인 재개:
+   1. Read .baton/state.json → currentPhase, phaseFlags 확인
+   2. Read .baton/complexity-score.md, todo.md, plan.md → 맥락 복원
+   3. 첫 번째 false flag = 재개 지점 → 해당 phase 에이전트 스폰
 C) QUERY — 질문/상태 확인 → 직접 응답 (코드 분석 제외)
 D) OVERRIDE — 사용자 수정 지시 → state 업데이트 + lesson 기록
 E) COMMAND — 슬래시 명령어 → 명령어 실행
