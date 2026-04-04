@@ -57,6 +57,19 @@ When implementing with external library APIs and the correct usage is uncertain:
 - On task completion: `TaskUpdate(status: "done")`
 - On scope-lock violation detected: `TaskUpdate(status: "blocked", reason: "SCOPE_EXCEED: {filename}")`
 
+## State Tracker Update
+On task completion (after TaskUpdate status: "done"), increment `workerTracker.doneCount` in `.baton/state.json`:
+
+```bash
+python3 -c "
+import json
+with open('.baton/state.json','r') as f: s=json.load(f)
+s['workerTracker']['doneCount'] = s['workerTracker'].get('doneCount',0) + 1
+with open('.baton/state.json','w') as f: json.dump(s,f,indent=2,ensure_ascii=False)
+"
+```
+This updates the statusline `wrk(N/M)` progress in real time.
+
 ## GitHub Issue Task Checkbox
 After completing a task (status: "done"), update the GitHub Issue checklist:
 
