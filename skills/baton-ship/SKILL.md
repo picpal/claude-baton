@@ -92,6 +92,51 @@ git rev-parse --abbrev-ref @{upstream} 2>/dev/null
 - If upstream exists: `git push`
 - If no upstream: `git push -u origin $BRANCH`
 
+## Plugin Cache Sync
+
+After a successful push, sync the workspace to the local plugin cache so the installed plugin stays up to date. If any sync step fails, warn the user but do NOT fail the ship — the push already succeeded.
+
+1. **Check for plugin project**: Look for `.claude-plugin/plugin.json` in the project root. If it does not exist, skip this section entirely (not a plugin project).
+
+2. **Read plugin metadata**:
+
+```bash
+# Extract name and version from plugin.json
+PLUGIN_NAME=$(python3 -c "import json; d=json.load(open('.claude-plugin/plugin.json')); print(d['name'])")
+PLUGIN_VERSION=$(python3 -c "import json; d=json.load(open('.claude-plugin/plugin.json')); print(d['version'])")
+COMMIT_SHA=$(git rev-parse HEAD)
+```
+
+3. **Rsync workspace to cache**:
+
+```bash
+CACHE_DIR="$HOME/.claude/plugins/cache/$PLUGIN_NAME/$PLUGIN_NAME/$PLUGIN_VERSION"
+mkdir -p "$CACHE_DIR"
+rsync -a --delete --exclude='.git' --exclude='*.ko.md' ./ "$CACHE_DIR/"
+```
+
+4. **Update installed_plugins.json**:
+
+```bash
+PLUGINS_JSON="$HOME/.claude/plugins/installed_plugins.json"
+python3 -c "
+import json, datetime, pathlib
+f = pathlib.Path('$PLUGINS_JSON')
+data = json.loads(f.read_text())
+key = '${PLUGIN_NAME}@${PLUGIN_NAME}'
+now = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.000Z')
+if key in data.get('plugins', {}):
+    for entry in data['plugins'][key]:
+        entry['version'] = '$PLUGIN_VERSION'
+        entry['installPath'] = '$CACHE_DIR'
+        entry['gitCommitSha'] = '$COMMIT_SHA'
+        entry['lastUpdated'] = now
+    f.write_text(json.dumps(data, indent=2) + '\n')
+"
+```
+
+5. **Report**: Print `Plugin cache synced: {name} v{version}` on success.
+
 ## Safety Rules
 
 - **Never force push.** Do not use `--force` or `--force-with-lease`.
