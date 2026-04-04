@@ -165,7 +165,10 @@ is_agent_stack_write() {
   echo "$stripped" | grep -qE '(^|[[:space:]/])\.agent-stack([[:space:]]|$)' || return 1
 
   # Check for write patterns using the ORIGINAL command (redirects must not be stripped)
-  if echo "$cmd" | grep -qE '(>>?|tee|sed\s+-i|rm\s|mv\s|cp\s|\.write\(|open\(.+[wW])'; then
+  # Strip fd redirects (2>/dev/null, 2>&1) first to avoid false positives
+  local cmd_no_fd
+  cmd_no_fd=$(echo "$cmd" | sed -E 's/[0-9]+>&[0-9]+//g; s/[0-9]+>>[[:space:]]*[^[:space:]]+//g; s/[0-9]+>[[:space:]]*[^[:space:]]+//g')
+  if echo "$cmd_no_fd" | grep -qE '(>>?|tee|sed\s+-i|rm\s|mv\s|cp\s|\.write\(|open\(.+[wW])'; then
     return 0
   fi
   if echo "$cmd" | grep -qE '(echo|printf).*>>?\s*.*\.agent-stack'; then
