@@ -62,17 +62,23 @@ On task completion (after TaskUpdate status: "done"), increment `workerTracker.d
 
 ```bash
 python3 -c "
-import json, fcntl
-with open('.baton/state.json','r+') as f:
+import json, fcntl, os, tempfile
+path = '.baton/state.json'
+with open(path, 'r+') as f:
     fcntl.flock(f, fcntl.LOCK_EX)
     s = json.load(f)
     s['workerTracker']['doneCount'] = s['workerTracker'].get('doneCount',0) + 1
-    data = json.dumps(s, indent=2, ensure_ascii=False)
-    f.seek(0); f.truncate()
-    f.write(data)
+    fd, tmp = tempfile.mkstemp(dir='.baton', suffix='.tmp')
+    try:
+        with os.fdopen(fd, 'w') as t:
+            json.dump(s, t, indent=2, ensure_ascii=False)
+        os.replace(tmp, path)
+    except:
+        os.unlink(tmp)
+        raise
 "
 ```
-Lock is released automatically when `with` closes the file descriptor — no manual `LOCK_UN` needed.
+Atomic write: temp file에 완전히 쓴 후 `os.replace`로 교체. 쓰기 실패 시 원본 보존.
 If this command exits non-zero, the Worker MUST report `STATE_UPDATE_FAILED` to Main and halt.
 Do NOT silently continue — an untracked worker count breaks the pipeline's phase transition logic.
 

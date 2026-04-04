@@ -104,17 +104,23 @@ After writing todo.md and registering all tasks, update `.baton/state.json`:
 
 ```bash
 python3 -c "
-import json, fcntl
-with open('.baton/state.json','r+') as f:
+import json, fcntl, os, tempfile
+path = '.baton/state.json'
+with open(path, 'r+') as f:
     fcntl.flock(f, fcntl.LOCK_EX)
     s = json.load(f)
     s['workerTracker']['expected'] = TASK_COUNT  # replace with actual count
     s['workerTracker']['doneCount'] = 0
-    data = json.dumps(s, indent=2, ensure_ascii=False)
-    f.seek(0); f.truncate()
-    f.write(data)
+    fd, tmp = tempfile.mkstemp(dir='.baton', suffix='.tmp')
+    try:
+        with os.fdopen(fd, 'w') as t:
+            json.dump(s, t, indent=2, ensure_ascii=False)
+        os.replace(tmp, path)
+    except:
+        os.unlink(tmp)
+        raise
 "
 ```
-Lock is released automatically when `with` closes the file descriptor — no manual `LOCK_UN` needed.
+Atomic write: temp file에 완전히 쓴 후 `os.replace`로 교체. 쓰기 실패 시 원본 보존.
 If this command exits non-zero, Task Manager MUST report `STATE_UPDATE_FAILED` to Main and halt.
 Do NOT silently continue — workers cannot track progress without a valid `workerTracker.expected`.
