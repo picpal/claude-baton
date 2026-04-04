@@ -57,33 +57,6 @@ When implementing with external library APIs and the correct usage is uncertain:
 - On task completion: `TaskUpdate(status: "done")`
 - On scope-lock violation detected: `TaskUpdate(status: "blocked", reason: "SCOPE_EXCEED: {filename}")`
 
-## State Tracker Update
-On task completion (after TaskUpdate status: "done"), increment `workerTracker.doneCount` in `.baton/state.json`:
-
-```bash
-python3 -c "
-import json, fcntl, os, tempfile
-path = '.baton/state.json'
-with open(path, 'r+') as f:
-    fcntl.flock(f, fcntl.LOCK_EX)
-    s = json.load(f)
-    s['workerTracker']['doneCount'] = s['workerTracker'].get('doneCount',0) + 1
-    mode = os.stat(path).st_mode & 0o777
-    fd, tmp = tempfile.mkstemp(dir='.baton', suffix='.tmp')
-    try:
-        os.fchmod(fd, mode)
-        with os.fdopen(fd, 'w') as t:
-            json.dump(s, t, indent=2, ensure_ascii=False)
-        os.replace(tmp, path)
-    except:
-        os.unlink(tmp)
-        raise
-"
-```
-Atomic write: temp file에 완전히 쓴 후 `os.replace`로 교체. 쓰기 실패 시 원본 보존.
-If this command exits non-zero, the Worker MUST report `STATE_UPDATE_FAILED` to Main and halt.
-Do NOT silently continue — an untracked worker count breaks the pipeline's phase transition logic.
-
 ## GitHub Issue Task Checkbox
 After completing a task (status: "done"), update the GitHub Issue checklist:
 
