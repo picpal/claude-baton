@@ -1,7 +1,7 @@
 ---
 name: worker-agent
 description: Executes assigned tasks following TDD principles and scope-lock rules.
-model: auto
+model: opus
 effort: high
 maxTurns: 30
 skills:
