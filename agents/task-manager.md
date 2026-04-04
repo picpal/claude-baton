@@ -95,31 +95,4 @@ After writing todo.md and registering all tasks via TaskCreate, update the GitHu
    ```
 4. If `gh` command fails, log warning and continue (non-blocking)
 
-## State Tracker Update
-After writing todo.md and registering all tasks, run this command **as-is** (no modification needed):
-
-```bash
-python3 -c "
-import json, fcntl, os, re, tempfile
-path = '.baton/state.json'
-with open('.baton/todo.md') as t:
-    expected = len(re.findall(r'^- \[ \] task-', t.read(), re.MULTILINE))
-with open(path, 'r+') as f:
-    fcntl.flock(f, fcntl.LOCK_EX)
-    s = json.load(f)
-    s['workerTracker']['expected'] = expected
-    s['workerTracker']['doneCount'] = 0
-    mode = os.stat(path).st_mode & 0o777
-    fd, tmp = tempfile.mkstemp(dir='.baton', suffix='.tmp')
-    try:
-        os.fchmod(fd, mode)
-        with os.fdopen(fd, 'w') as t:
-            json.dump(s, t, indent=2, ensure_ascii=False)
-        os.replace(tmp, path)
-    except:
-        os.unlink(tmp)
-        raise
-"
-```
-Task count is auto-read from todo.md (`- [ ] task-` lines). No placeholders to replace.
-If this command exits non-zero, Task Manager MUST report `STATE_UPDATE_FAILED` to Main and halt.
+<!-- workerTracker.expected는 agent-logger.sh SubagentStop 훅이 todo.md에서 자동 카운팅하여 설정 — 수동 설정 불필요 -->
