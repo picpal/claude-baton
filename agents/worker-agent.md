@@ -62,18 +62,16 @@ On task completion (after TaskUpdate status: "done"), increment `workerTracker.d
 
 ```bash
 python3 -c "
-import json, fcntl, sys
+import json, fcntl
 with open('.baton/state.json','r+') as f:
     fcntl.flock(f, fcntl.LOCK_EX)
-    try:
-        s = json.load(f)
-        s['workerTracker']['doneCount'] = s['workerTracker'].get('doneCount',0) + 1
-        f.seek(0); f.truncate()
-        json.dump(s, f, indent=2, ensure_ascii=False)
-    finally:
-        fcntl.flock(f, fcntl.LOCK_UN)
+    s = json.load(f)
+    s['workerTracker']['doneCount'] = s['workerTracker'].get('doneCount',0) + 1
+    f.seek(0); f.truncate()
+    json.dump(s, f, indent=2, ensure_ascii=False)
 "
 ```
+Lock is released automatically when `with` closes the file descriptor — no manual `LOCK_UN` needed.
 If this command exits non-zero, the Worker MUST report `STATE_UPDATE_FAILED` to Main and halt.
 Do NOT silently continue — an untracked worker count breaks the pipeline's phase transition logic.
 
