@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# test-main-guard-bash-seal.sh — Tests for main-guard-bash.sh self-sealing control flow
+# test-main-guard-bash-seal.sh — Tests for main-guard-bash.sh seal control flow
 #
 # Verifies:
 #   1. .agent-stack write → BLOCKED always (even for subagent)
-#   2. state.json write, file NOT existing → ALLOWED (init)
-#   3. state.json write, file existing, NOT subagent → BLOCKED
+#   2. state.json write, file NOT existing → ALLOWED
+#   3. state.json write, file existing, NOT subagent → ALLOWED (no self-sealing)
 #   4. Normal code file write by Main → BLOCKED (existing behavior preserved)
 
 set -euo pipefail
@@ -159,24 +159,25 @@ assert_allowed "2b: python write state.json (init, file not exists)" "$exit_code
 echo ""
 
 # ─────────────────────────────────────────────────
-# Test 3: state.json write, file existing, NOT subagent → BLOCKED
+# Test 3: state.json write, file existing, NOT subagent → ALLOWED
+#   No self-sealing — state.json is a .baton/ path, writable by Main for pipeline recovery.
 # ─────────────────────────────────────────────────
-echo "--- Test Group 3: state.json write (existing, no subagent) → BLOCKED ---"
+echo "--- Test Group 3: state.json write (existing, no subagent) → ALLOWED (no sealing) ---"
 
-# 3a: echo redirect to state.json, file EXISTS
+# 3a: echo redirect to state.json, file EXISTS → ALLOWED (.baton/ write)
 exit_code=0
 run_guard 'echo "{}" > .baton/state.json' "" "state_exists" || exit_code=$?
-assert_blocked "3a: echo > state.json (exists, Main)" "$exit_code"
+assert_allowed "3a: echo > state.json (exists, Main) — .baton/ write allowed" "$exit_code"
 
-# 3b: sed -i on state.json, file EXISTS
+# 3b: sed -i on state.json, file EXISTS → ALLOWED (.baton/ write)
 exit_code=0
 run_guard 'sed -i "" "s/old/new/" .baton/state.json' "" "state_exists" || exit_code=$?
-assert_blocked "3b: sed -i state.json (exists, Main)" "$exit_code"
+assert_allowed "3b: sed -i state.json (exists, Main) — .baton/ write allowed" "$exit_code"
 
-# 3c: rm state.json, file EXISTS
+# 3c: rm state.json, file EXISTS → ALLOWED (.baton/ rm allowed)
 exit_code=0
 run_guard 'rm .baton/state.json' "" "state_exists" || exit_code=$?
-assert_blocked "3c: rm state.json (exists, Main)" "$exit_code"
+assert_allowed "3c: rm state.json (exists, Main) — .baton/ rm allowed" "$exit_code"
 
 # 3d: cat (read) state.json, file EXISTS → ALLOWED
 exit_code=0
@@ -271,10 +272,10 @@ exit_code=0
 run_guard 'echo "state.json" > /tmp/log.txt' "" "state_exists" || exit_code=$?
 assert_allowed "6c: echo 'state.json' > /tmp/log.txt — quoted filename must not trigger state.json seal" "$exit_code"
 
-# 6d: echo data > .baton/state.json → should still be BLOCKED (state.json is NOT in quotes)
+# 6d: echo data > .baton/state.json → ALLOWED (state.json sealing removed, .baton/ write allowed)
 exit_code=0
 run_guard 'echo data > .baton/state.json' "" "state_exists" || exit_code=$?
-assert_blocked "6d: echo data > .baton/state.json — unquoted redirect must still be BLOCKED" "$exit_code"
+assert_allowed "6d: echo data > .baton/state.json — .baton/ write allowed (no sealing)" "$exit_code"
 
 # 6e: cat .baton/state.json → should still be ALLOWED (read, not write)
 exit_code=0

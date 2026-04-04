@@ -84,18 +84,6 @@ main() {
     exit 1
   fi
 
-  # state.json — self-sealing: allow first creation, block after
-  if echo "$file_path" | grep -qE '(^|/)state\.json$'; then
-    STATE_FILE="$BATON_DIR/state.json"
-    if [ -f "$STATE_FILE" ]; then
-      log "DENIED: Protected pipeline file (sealed): $file_path"
-      echo "⛔ [Main Guard] state.json is sealed (already exists). Direct modification is not allowed."
-      exit 1
-    fi
-    log "PASSED: state.json init creation allowed (file does not exist yet)"
-    exit 0
-  fi
-
   # Subagent 실행 중이면 통과 (Worker가 실행 중)
   if is_subagent_active; then
     local active_agent

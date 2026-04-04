@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# test-main-guard-seal.sh — state.json self-sealing guard tests
-# Tests the self-sealing behavior of state.json and the permanent block on .agent-stack
+# test-main-guard-seal.sh — state.json & .agent-stack guard tests
+# Tests that state.json is freely writable (via is_allowed_path) and .agent-stack is permanently blocked
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 GUARD="$SCRIPT_DIR/../main-guard.sh"
@@ -59,17 +59,19 @@ else
 fi
 
 # ────────────────────────────────────────────────────────────
-# Test 2: state.json — EXISTS → BLOCK (exit 1 or 2)
+# Test 2: state.json — EXISTS → ALLOW (exit 0)
+#   state.json is a .baton/ path and passes is_allowed_path().
+#   No self-sealing — Main needs to modify state.json for recovery.
 # ────────────────────────────────────────────────────────────
 echo ""
-echo "Test 2: state.json exists → should be BLOCKED (exit 1 or 2)"
+echo "Test 2: state.json exists → should be ALLOWED (exit 0, .baton/ path)"
 echo '{"phase":"done"}' > "$PROJECT/.baton/state.json"
 
 RESULT=$(run_guard "$PROJECT/.baton/state.json" "$PROJECT")
-if [ "$RESULT" = "1" ] || [ "$RESULT" = "2" ]; then
-  pass "state.json (file exists) → exit $RESULT (blocked)"
+if [ "$RESULT" = "0" ]; then
+  pass "state.json (file exists) → exit 0 (allowed via is_allowed_path)"
 else
-  fail "state.json (file exists) → got exit $RESULT, expected 1 or 2"
+  fail "state.json (file exists) → got exit $RESULT, expected 0"
 fi
 
 # ────────────────────────────────────────────────────────────

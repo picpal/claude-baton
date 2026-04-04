@@ -5,7 +5,7 @@
 #
 # 핵심 로직:
 # - Subagent 스택이 비어있으면 = Main Agent가 직접 호출
-# - .agent-stack / state.json 쓰기 차단
+# - .agent-stack 쓰기 차단 (항상)
 # - is_dangerous_write() 패턴만 차단, 나머지는 모두 허용
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -174,34 +174,6 @@ is_agent_stack_write() {
   return 1  # Read-only access — allow
 }
 
-# state.json write detection — blocked only if state.json already exists (allow init)
-is_state_json_write() {
-  local cmd="$1"
-  local stripped
-  stripped=$(strip_quoted_strings "$cmd")
-  # Does command reference state.json at all? (anchored: must be at path boundary)
-  # Use stripped string so quoted mentions (e.g. commit messages) are ignored.
-  echo "$stripped" | grep -qE '(^|[[:space:]/])state\.json([[:space:]]|$|["\x27])' || return 1
-
-  # Check for write patterns using the ORIGINAL command (redirects must not be stripped)
-  local is_write=false
-  if echo "$cmd" | grep -qE '(>>?|tee|sed\s+-i|rm\s|mv\s|cp\s|\.write\(|open\(.+[wW])'; then
-    is_write=true
-  fi
-  if echo "$cmd" | grep -qE '(echo|printf).*>>?\s*.*state\.json'; then
-    is_write=true
-  fi
-
-  [ "$is_write" = "false" ] && return 1  # Read-only access — allow
-
-  # Self-sealing: block only if state.json already exists
-  if [ -f "$BATON_DIR/state.json" ]; then
-    return 0  # EXISTS → block write
-  fi
-
-  return 1  # NOT EXISTS → allow init write
-}
-
 # Check if command contains dangerous write patterns to non-.baton files
 is_dangerous_write() {
   local cmd="$1"
@@ -306,12 +278,6 @@ main() {
     active_agent=$(tail -1 "$AGENT_STACK_FILE" 2>/dev/null | cut -d'|' -f2 || echo "unknown")
     log "PASSED: Subagent active ($active_agent)"
     exit 0
-  fi
-
-  # ── 3. state.json write → EXISTS → BLOCK / NOT EXISTS → ALLOW ──
-  if is_state_json_write "$command"; then
-    log "BLOCKED: Write to state.json (file already exists)"
-    block "⛔ [R01] state.json is sealed after initialization. Cannot be modified via Bash."
   fi
 
   log "Checking: command=${command:0:100}"
