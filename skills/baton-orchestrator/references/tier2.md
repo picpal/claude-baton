@@ -46,6 +46,7 @@ Issue Registration
 - Split plan into independent tasks using baton-task-splitter
 - Auto-tag each task with its stack
 - Assign worker model (sonnet/opus) based on task complexity
+- **All agent spawns must pass `model` parameter explicitly** — do not rely on frontmatter alone
 - Write .baton/todo.md
 
 ### Phase 5: Workers (Parallel)

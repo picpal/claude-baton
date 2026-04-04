@@ -20,6 +20,7 @@ Issue Registration
 - **Auto-proceed**: Phases transition automatically, same as other tiers. Only Interview is interactive.
 - **safe/baseline tag**: Created immediately after Planning completion
 - **All workers default to opus model** unless explicitly downgraded
+- **All agent spawns must pass `model` parameter explicitly** — do not rely on frontmatter alone
 
 ### Phase 0: Issue Registration
 - Main Orchestrator invokes baton-issue-register skill

@@ -56,6 +56,10 @@ Use `scripts/score.sh` for automated calculation.
 - **sonnet**: files ≤3, no dependencies, no architectural decisions
 - **opus**: files >3, cross-service, architectural decisions, security-related
 
+## Agent Spawn — Explicit Model Parameter (Required)
+When spawning any agent via the Agent tool, **always pass the `model` parameter explicitly**.
+Do NOT rely on agent definition frontmatter alone — it may be ignored due to inheritance.
+
 ## QA Rules
 - Unit QA + Integration QA run in parallel
 - Multi-stack: include cross-stack API contract tests

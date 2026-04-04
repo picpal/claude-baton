@@ -34,7 +34,7 @@ Score 0–3 pts. Simple, isolated changes with minimal risk.
 
 ### Worker
 - Single worker assigned
-- Model: sonnet (default for Tier 1)
+- Model: sonnet (default for Tier 1) — must pass `model: "sonnet"` explicitly at spawn
 - TDD enforced: test code before implementation
 - scope-lock active: only modify assigned files
 
