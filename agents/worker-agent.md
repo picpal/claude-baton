@@ -67,8 +67,9 @@ with open('.baton/state.json','r+') as f:
     fcntl.flock(f, fcntl.LOCK_EX)
     s = json.load(f)
     s['workerTracker']['doneCount'] = s['workerTracker'].get('doneCount',0) + 1
+    data = json.dumps(s, indent=2, ensure_ascii=False)
     f.seek(0); f.truncate()
-    json.dump(s, f, indent=2, ensure_ascii=False)
+    f.write(data)
 "
 ```
 Lock is released automatically when `with` closes the file descriptor — no manual `LOCK_UN` needed.
