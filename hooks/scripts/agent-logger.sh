@@ -18,15 +18,23 @@ AGENT_STACK_FILE="$BATON_LOG_DIR/.agent-stack"
 EVENT="${1:-}"
 TIMESTAMP=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
 
-# Get agent name/description — try agent_name first (SubagentStart/Stop), then tool_input.description
-AGENT_NAME=$(hook_get_field "agent_name" 2>/dev/null)
+# Get agent name/description — try agent_type first (SubagentStart/Stop actual field),
+# then fall back to legacy fields for backward compatibility
+AGENT_NAME=$(hook_get_field "agent_type" 2>/dev/null)
 if [ -z "$AGENT_NAME" ]; then
-  AGENT_NAME=$(hook_get_field "tool_input.description" 2>/dev/null || echo "unknown")
+  AGENT_NAME=$(hook_get_field "tool_input.description" 2>/dev/null)
 fi
+if [ -z "$AGENT_NAME" ]; then
+  AGENT_NAME=$(hook_get_field "agent_name" 2>/dev/null)
+fi
+[ -z "$AGENT_NAME" ] && AGENT_NAME="unknown"
 
 # -------------------------------------------------------------------
-# Detect agent type from description prefix (case-insensitive check)
-# Returns: analysis|interview|planning|taskmgr|worker|qa-unit|qa-integration|review|unknown
+# Detect agent type from agent_type field or description prefix (case-insensitive)
+# Returns: analysis|interview|planning|taskmgr|worker|qa-unit|qa-integration|review|issue-register|unknown
+#
+# Priority 1: agent_type format (SubagentStart/Stop) — e.g., "claude-baton:security-guardian"
+# Priority 2: legacy description-prefix format — e.g., "security guardian:..."
 # -------------------------------------------------------------------
 detect_agent_type() {
   local desc="$1"
@@ -34,6 +42,28 @@ detect_agent_type() {
   lower_desc=$(echo "$desc" | tr '[:upper:]' '[:lower:]')
 
   case "$lower_desc" in
+    # ------------------------------------------------------------------
+    # agent_type format: *:suffix (SubagentStart/SubagentStop JSON field)
+    # Matches regardless of prefix (e.g., "claude-baton:worker-agent")
+    # ------------------------------------------------------------------
+    *:security-guardian)          echo "review" ;;
+    *:quality-inspector)          echo "review" ;;
+    *:tdd-enforcer-reviewer)      echo "review" ;;
+    *:performance-analyst)        echo "review" ;;
+    *:standards-keeper)           echo "review" ;;
+    *:worker-agent)               echo "worker" ;;
+    *:qa-unit)                    echo "qa-unit" ;;
+    *:qa-integration)             echo "qa-integration" ;;
+    *:analysis-agent)             echo "analysis" ;;
+    *:interview-agent)            echo "interview" ;;
+    *:planning-architect)         echo "planning" ;;
+    *:planning-security)          echo "planning" ;;
+    *:planning-dev-lead)          echo "planning" ;;
+    *:task-manager)               echo "taskmgr" ;;
+    *:issue-register)             echo "issue-register" ;;
+    # ------------------------------------------------------------------
+    # Legacy description-prefix patterns (backward compatibility)
+    # ------------------------------------------------------------------
     analysis:*|analysis\ *)       echo "analysis" ;;
     interview:*)                  echo "interview" ;;
     planning:*|planning-*)        echo "planning" ;;
