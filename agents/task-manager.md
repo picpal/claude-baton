@@ -104,11 +104,20 @@ After writing todo.md and registering all tasks, update `.baton/state.json`:
 
 ```bash
 python3 -c "
-import json
-with open('.baton/state.json','r') as f: s=json.load(f)
-s['workerTracker']['expected'] = TASK_COUNT  # replace with actual count
-s['workerTracker']['doneCount'] = 0
-with open('.baton/state.json','w') as f: json.dump(s,f,indent=2,ensure_ascii=False)
+import json, fcntl, sys
+try:
+    with open('.baton/state.json','r+') as f:
+        fcntl.flock(f, fcntl.LOCK_EX)
+        try:
+            s = json.load(f)
+            s['workerTracker']['expected'] = TASK_COUNT  # replace with actual count
+            s['workerTracker']['doneCount'] = 0
+            f.seek(0); f.truncate()
+            json.dump(s, f, indent=2, ensure_ascii=False)
+        finally:
+            fcntl.flock(f, fcntl.LOCK_UN)
+except Exception as e:
+    print(f'[baton] state.json update failed: {e}', file=sys.stderr)
 "
 ```
-This enables the statusline to show accurate `wrk(0/N)` from the start of the worker phase.
+Lock is guaranteed to release via `try/finally`. Errors are logged to stderr without blocking the pipeline.

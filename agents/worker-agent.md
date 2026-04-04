@@ -62,13 +62,22 @@ On task completion (after TaskUpdate status: "done"), increment `workerTracker.d
 
 ```bash
 python3 -c "
-import json
-with open('.baton/state.json','r') as f: s=json.load(f)
-s['workerTracker']['doneCount'] = s['workerTracker'].get('doneCount',0) + 1
-with open('.baton/state.json','w') as f: json.dump(s,f,indent=2,ensure_ascii=False)
+import json, fcntl, sys
+try:
+    with open('.baton/state.json','r+') as f:
+        fcntl.flock(f, fcntl.LOCK_EX)
+        try:
+            s = json.load(f)
+            s['workerTracker']['doneCount'] = s['workerTracker'].get('doneCount',0) + 1
+            f.seek(0); f.truncate()
+            json.dump(s, f, indent=2, ensure_ascii=False)
+        finally:
+            fcntl.flock(f, fcntl.LOCK_UN)
+except Exception as e:
+    print(f'[baton] state.json update failed: {e}', file=sys.stderr)
 "
 ```
-This updates the statusline `wrk(N/M)` progress in real time.
+Lock is guaranteed to release via `try/finally`. Errors are logged to stderr without blocking the pipeline.
 
 ## GitHub Issue Task Checkbox
 After completing a task (status: "done"), update the GitHub Issue checklist:
