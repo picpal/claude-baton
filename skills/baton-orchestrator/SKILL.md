@@ -44,6 +44,17 @@ Use `scripts/score.sh` for automated calculation.
 - The only interactive phase is **Interview** (waits for user responses).
 - Exceptions requiring user input: Security Rollback (R04/R05), Tier 3 Planning conflicts (R10), checkpoint restore, stack detection failure (R11).
 
+## Pipeline Resume (Session Interrupted)
+When `currentPhase` is not `idle` or `done` at session start, a previous pipeline was interrupted.
+Do NOT reset — resume from the interrupted phase:
+
+1. **Read state**: `.baton/state.json` → `currentPhase`, `phaseFlags`, trackers
+2. **Read context**: `.baton/complexity-score.md` (tier, stacks), `.baton/todo.md` (task progress), `.baton/plan.md` (design)
+3. **Determine resume point**: first `phaseFlag` that is `false` in tier's phase order
+4. **Spawn**: the agent for that phase — phase-gate will allow it since prior flags are `true`
+
+If `workerCompleted=false` and `workerTracker.doneCount > 0`, check todo.md for remaining unchecked tasks and spawn workers only for those.
+
 ## Pipeline Overview
 
 | Tier | Flow | Details |
