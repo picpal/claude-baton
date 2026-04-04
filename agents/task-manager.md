@@ -96,20 +96,18 @@ After writing todo.md and registering all tasks via TaskCreate, update the GitHu
 4. If `gh` command fails, log warning and continue (non-blocking)
 
 ## State Tracker Update
-After writing todo.md and registering all tasks, update `.baton/state.json`:
-1. Read current state.json
-2. Set `workerTracker.expected` to the total number of worker tasks
-3. Set `workerTracker.doneCount` to 0
-4. Write back state.json
+After writing todo.md and registering all tasks, run this command **as-is** (no modification needed):
 
 ```bash
 python3 -c "
-import json, fcntl, os, tempfile
+import json, fcntl, os, re, tempfile
 path = '.baton/state.json'
+with open('.baton/todo.md') as t:
+    expected = len(re.findall(r'^- \[ \] task-', t.read(), re.MULTILINE))
 with open(path, 'r+') as f:
     fcntl.flock(f, fcntl.LOCK_EX)
     s = json.load(f)
-    s['workerTracker']['expected'] = TASK_COUNT  # replace with actual count
+    s['workerTracker']['expected'] = expected
     s['workerTracker']['doneCount'] = 0
     mode = os.stat(path).st_mode & 0o777
     fd, tmp = tempfile.mkstemp(dir='.baton', suffix='.tmp')
@@ -123,6 +121,5 @@ with open(path, 'r+') as f:
         raise
 "
 ```
-Atomic write: temp file에 완전히 쓴 후 `os.replace`로 교체. 쓰기 실패 시 원본 보존.
+Task count is auto-read from todo.md (`- [ ] task-` lines). No placeholders to replace.
 If this command exits non-zero, Task Manager MUST report `STATE_UPDATE_FAILED` to Main and halt.
-Do NOT silently continue — workers cannot track progress without a valid `workerTracker.expected`.
