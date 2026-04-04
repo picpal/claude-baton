@@ -68,8 +68,10 @@ with open(path, 'r+') as f:
     fcntl.flock(f, fcntl.LOCK_EX)
     s = json.load(f)
     s['workerTracker']['doneCount'] = s['workerTracker'].get('doneCount',0) + 1
+    mode = os.stat(path).st_mode
     fd, tmp = tempfile.mkstemp(dir='.baton', suffix='.tmp')
     try:
+        os.fchmod(fd, mode)
         with os.fdopen(fd, 'w') as t:
             json.dump(s, t, indent=2, ensure_ascii=False)
         os.replace(tmp, path)
