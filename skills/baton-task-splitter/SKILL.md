@@ -7,7 +7,7 @@ description: |
   work items", "break down the plan", "create tasks". Reads plan.md or complexity-score.md,
   produces structured todo.md with stack tags and dependency tracking.
   NOT for checking status, viewing progress, reviewing code, or reading existing todos.
-allowed-tools: Read, Write, Bash, TaskCreate, TaskList
+allowed-tools: Read, Write, Bash, Grep, TaskCreate, TaskList
 ---
 
 # Task Splitter Skill
@@ -50,3 +50,23 @@ Each task is registered via `TaskCreate` at the same time todo.md is written.
 ### Dependency Mapping
 - `depends: task-{id}` in todo.md is recorded identically in TaskCreate's metadata.depends
 - If a circular dependency is detected, report to Main and wait
+
+## GitHub Issue Checklist Sync
+After all tasks are written to todo.md and registered via TaskCreate:
+
+1. Check if `.baton/issue.md` exists and has an issue number
+2. If yes, read the current issue body: `gh issue view <number> --json body -q .body`
+3. Build a task checklist block:
+   ```markdown
+   ## Tasks
+   - [ ] task-01: {description} (`{stack}`)
+   - [ ] task-02: {description} (`{stack}`)
+   ```
+4. Append the checklist to the existing issue body:
+   ```bash
+   gh issue edit <number> --body "$EXISTING_BODY
+
+   ## Tasks
+   $CHECKLIST"
+   ```
+5. If `gh` CLI is unavailable or fails, skip gracefully (non-blocking)

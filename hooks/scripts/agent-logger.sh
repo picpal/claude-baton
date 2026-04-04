@@ -46,6 +46,7 @@ detect_agent_type() {
     tdd\ enforcer:*)              echo "review" ;;
     performance\ analyst:*)       echo "review" ;;
     standards\ keeper:*)          echo "review" ;;
+    issue*register*|issue\ register*) echo "issue-register" ;;
     *)                            echo "unknown" ;;
   esac
 }
@@ -69,8 +70,9 @@ update_current_phase() {
   local tier
   tier=$(state_get_tier)
 
-  local analysis_done planning_done taskmgr_done worker_done
+  local issue_done analysis_done planning_done taskmgr_done worker_done
   local qa_unit_done qa_int_done review_done interview_done
+  issue_done=$(state_read "phaseFlags.issueRegistered")
   analysis_done=$(state_read "phaseFlags.analysisCompleted")
   interview_done=$(state_read "phaseFlags.interviewCompleted")
   planning_done=$(state_read "phaseFlags.planningCompleted")
@@ -82,7 +84,9 @@ update_current_phase() {
 
   local phase="idle"
 
-  if [ "$analysis_done" != "true" ]; then
+  if [ "$issue_done" != "true" ] && [ "$tier" != "1" ] && [ "$tier" != "null" ] && [ -n "$tier" ]; then
+    phase="issue-register"
+  elif [ "$analysis_done" != "true" ]; then
     phase="analysis"
   elif [ "$interview_done" != "true" ] && [ "$tier" != "1" ] && [ "$tier" != "null" ]; then
     phase="interview"
@@ -212,6 +216,11 @@ handle_analysis_stop() {
         state_write "planningTracker.expected" "0"
         state_write "reviewTracker.expected" "0"
         # Tier 1 skips: interview, planning, taskmgr, integration QA, review
+        local issue_reg
+        issue_reg=$(state_read "phaseFlags.issueRegistered")
+        if [ "$issue_reg" != "true" ]; then
+          state_write "phaseFlags.issueRegistered" "true"
+        fi
         state_write "phaseFlags.interviewCompleted" "true"
         state_write "phaseFlags.planningCompleted" "true"
         state_write "phaseFlags.taskMgrCompleted" "true"
@@ -227,6 +236,28 @@ handle_analysis_stop() {
         state_write "reviewTracker.expected" "5"
         ;;
     esac
+  fi
+}
+
+# -------------------------------------------------------------------
+# Handle issue-register agent completion — store issue number
+# -------------------------------------------------------------------
+handle_issue_register_stop() {
+  state_write "phaseFlags.issueRegistered" "true"
+
+  local output
+  output=$(get_agent_output)
+
+  local issue_num
+  issue_num=$(echo "$output" | grep -oE 'ISSUE_NUMBER:[0-9]+' | head -1 | cut -d: -f2)
+  if [ -n "$issue_num" ]; then
+    state_write "issueNumber" "$issue_num"
+  fi
+
+  local issue_url
+  issue_url=$(echo "$output" | grep -oE 'ISSUE_URL:[^ ]+' | head -1 | cut -d: -f2-)
+  if [ -n "$issue_url" ]; then
+    state_write "issueUrl" "$issue_url"
   fi
 }
 
@@ -329,6 +360,9 @@ case "$EVENT" in
     case "$AGENT_TYPE" in
       analysis)
         handle_analysis_stop
+        ;;
+      issue-register)
+        handle_issue_register_stop
         ;;
       interview)
         state_write "phaseFlags.interviewCompleted" "true"

@@ -31,6 +31,7 @@ feat(task-{id}): {summary} (#N)
 test(task-{id}): {test description} (#N)
 fix(task-{id}): {fix description} (#N)
 ```
+This links each commit to both the issue and the specific task for full traceability.
 If `.baton/issue.md` does not exist or has no issue number, omit the reference:
 ```
 feat(task-{id}): {summary}
@@ -55,6 +56,16 @@ When implementing with external library APIs and the correct usage is uncertain:
 - On task start: verify the assigned task with `TaskGet`, then `TaskUpdate(status: "in_progress")`
 - On task completion: `TaskUpdate(status: "done")`
 - On scope-lock violation detected: `TaskUpdate(status: "blocked", reason: "SCOPE_EXCEED: {filename}")`
+
+## GitHub Issue Task Checkbox
+After completing a task (status: "done"), update the GitHub Issue checklist:
+
+1. Read `.baton/issue.md` for the issue number. If missing, skip.
+2. Get current issue body: `gh issue view <number> --json body -q .body`
+3. Find the matching task line (e.g., `- [ ] task-01:`) and check it off:
+   Replace `- [ ] task-{id}:` with `- [x] task-{id}:`
+4. Update: `gh issue edit <number> --body "$UPDATED_BODY"`
+5. If `gh` fails, log warning and continue (non-blocking)
 
 ## Lesson Reporting
 When a rework succeeds (you fixed an issue reported by QA or Code Review), include a `LESSON_REPORT:` block in your output to Main to record what the root cause was:

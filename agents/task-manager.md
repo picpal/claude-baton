@@ -7,7 +7,7 @@ maxTurns: 15
 skills:
   - baton-task-splitter
   - baton-orchestrator
-allowed-tools: Read, Write, TaskCreate, TaskUpdate, TaskGet, TaskList
+allowed-tools: Read, Write, Grep, TaskCreate, TaskUpdate, TaskGet, TaskList
 ---
 
 # Task Manager Agent
@@ -66,3 +66,31 @@ TaskCreate({
 - On Worker completion: `TaskUpdate(id, { status: "done" })` + update `[ ]` → `[x]` in todo.md
 - On QA failure: `TaskUpdate(id, { status: "blocked" })` + record reason
 - After 3 failures, escalation: `TaskUpdate(id, { status: "escalated" })`
+
+## GitHub Issue Checklist Sync
+After writing todo.md and registering all tasks via TaskCreate, update the GitHub Issue body with a task checklist.
+
+### When to Sync
+- Only if `.baton/issue.md` exists and contains an issue number
+- Execute after all tasks are registered
+
+### How to Sync
+1. Read `.baton/issue.md` to get the issue number
+2. Build a checklist from todo.md tasks:
+   ```
+   ## Tasks
+   - [ ] task-01: {description} (`{stack}`)
+   - [ ] task-02: {description} (`{stack}`)
+   ```
+3. Update the issue body by appending the checklist:
+   ```bash
+   gh issue edit <number> --body "$(cat <<'EOF'
+   <original body>
+
+   ## Tasks
+   - [ ] task-01: description (`stack`)
+   - [ ] task-02: description (`stack`)
+   EOF
+   )"
+   ```
+4. If `gh` command fails, log warning and continue (non-blocking)
