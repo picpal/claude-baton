@@ -18,6 +18,9 @@ AGENT_STACK_FILE="$BATON_LOG_DIR/.agent-stack"
 EVENT="${1:-}"
 TIMESTAMP=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
 
+# QA_MAX_RETRIES — max QA failures before escalating to taskmgr (default 3)
+QA_MAX_RETRIES="${QA_MAX_RETRIES:-3}"
+
 # Get agent name/description — try agent_type first (SubagentStart/Stop actual field),
 # then fall back to legacy fields for backward compatibility
 AGENT_NAME=$(hook_get_field "agent_type" 2>/dev/null)
@@ -139,6 +142,8 @@ update_current_phase() {
 
 # -------------------------------------------------------------------
 # Add an entry to a JSON array field in state.json
+# Uses fcntl.flock + atomic os.replace (same lock convention as
+# state-manager.sh) so that parallel calls do not lose appends.
 # -------------------------------------------------------------------
 state_array_add() {
   local field="$1"
@@ -149,35 +154,57 @@ state_array_add() {
   fi
 
   BATON_STATE_FILE="$STATE_FILE" BATON_FIELD="$field" BATON_VALUE="$value" python3 -c "
-import json, sys, os
+import json, sys, os, tempfile, fcntl
 from datetime import datetime, timezone
 
 state_file = os.environ['BATON_STATE_FILE']
 field = os.environ['BATON_FIELD']
 value = os.environ['BATON_VALUE']
+lock_path = os.path.join(os.path.dirname(state_file), '.state.lock')
 
-with open(state_file, 'r') as f:
-    data = json.load(f)
+# --- BEGIN LOCKED STATE MUTATION (fcntl.flock + atomic os.replace) ---
+with open(lock_path, 'w') as lock_fd:
+    fcntl.flock(lock_fd.fileno(), fcntl.LOCK_EX)
 
-keys = field.split('.')
-obj = data
-for k in keys[:-1]:
-    if k not in obj or not isinstance(obj[k], dict):
-        obj[k] = {}
-    obj = obj[k]
+    if os.environ.get('SLOW_MUTATE') == '1':
+        import time
+        time.sleep(0.2)
 
-last_key = keys[-1]
-if last_key not in obj or not isinstance(obj[last_key], list):
-    obj[last_key] = []
+    with open(state_file, 'r') as f:
+        data = json.load(f)
 
-if value not in obj[last_key]:
-    obj[last_key].append(value)
+    keys = field.split('.')
+    obj = data
+    for k in keys[:-1]:
+        if k not in obj or not isinstance(obj[k], dict):
+            obj[k] = {}
+        obj = obj[k]
 
-data['timestamp'] = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+    last_key = keys[-1]
+    if last_key not in obj or not isinstance(obj[last_key], list):
+        obj[last_key] = []
 
-with open(state_file, 'w') as f:
-    json.dump(data, f, indent=2)
-    f.write('\n')
+    if value not in obj[last_key]:
+        obj[last_key].append(value)
+
+    data['timestamp'] = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+    dir_name = os.path.dirname(state_file)
+    tmp_path = None
+    try:
+        with tempfile.NamedTemporaryFile('w', dir=dir_name, delete=False) as tf:
+            json.dump(data, tf, indent=2)
+            tf.write('\n')
+            tmp_path = tf.name
+        os.replace(tmp_path, state_file)
+        tmp_path = None
+    finally:
+        if tmp_path is not None and os.path.exists(tmp_path):
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+# --- END LOCKED STATE MUTATION ---
 " 2>/dev/null
 }
 
@@ -204,17 +231,74 @@ except Exception:
 
 # -------------------------------------------------------------------
 # Increment a numeric field in state.json
+# Single locked python block (read+modify+write atomic) — fixes the
+# R12 race where the previous bash read-modify-write across two
+# subprocesses could lose increments under concurrent calls.
 # -------------------------------------------------------------------
 state_increment() {
   local field="$1"
-  local current
-  current=$(state_read "$field")
-  if [ "$current" = "null" ] || [ -z "$current" ]; then
-    current=0
+
+  if [ ! -f "$STATE_FILE" ]; then
+    state_init
   fi
-  local new_val=$((current + 1))
-  state_write "$field" "$new_val"
-  echo "$new_val"
+
+  BATON_STATE_FILE="$STATE_FILE" BATON_FIELD="$field" python3 -c "
+import json, sys, os, tempfile, fcntl
+from datetime import datetime, timezone
+
+state_file = os.environ['BATON_STATE_FILE']
+field = os.environ['BATON_FIELD']
+lock_path = os.path.join(os.path.dirname(state_file), '.state.lock')
+
+# --- BEGIN LOCKED STATE MUTATION (fcntl.flock + atomic os.replace) ---
+with open(lock_path, 'w') as lock_fd:
+    fcntl.flock(lock_fd.fileno(), fcntl.LOCK_EX)
+
+    if os.environ.get('SLOW_MUTATE') == '1':
+        import time
+        time.sleep(0.2)
+
+    with open(state_file, 'r') as f:
+        data = json.load(f)
+
+    # Navigate dot-notation, creating missing intermediate dicts
+    keys = field.split('.')
+    obj = data
+    for k in keys[:-1]:
+        if k not in obj or not isinstance(obj[k], dict):
+            obj[k] = {}
+        obj = obj[k]
+
+    last_key = keys[-1]
+    current = obj.get(last_key, 0)
+    if not isinstance(current, (int, float)) or isinstance(current, bool):
+        current = 0
+    new_val = int(current) + 1
+    obj[last_key] = new_val
+
+    data['timestamp'] = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+    dir_name = os.path.dirname(state_file)
+    tmp_path = None
+    try:
+        with tempfile.NamedTemporaryFile('w', dir=dir_name, delete=False) as tf:
+            json.dump(data, tf, indent=2)
+            tf.write('\n')
+            tmp_path = tf.name
+        os.replace(tmp_path, state_file)
+        tmp_path = None
+    finally:
+        if tmp_path is not None and os.path.exists(tmp_path):
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+
+    # Print the new value AFTER the atomic replace, while still holding
+    # the lock so callers always see a value consistent with the file.
+    print(new_val)
+# --- END LOCKED STATE MUTATION ---
+" 2>/dev/null
 }
 
 # -------------------------------------------------------------------
@@ -339,6 +423,20 @@ handle_worker_stop() {
 }
 
 # -------------------------------------------------------------------
+# Extract task_id from QA_RESULT marker, defaulting to "global".
+# Format: QA_RESULT:(PASS|FAIL|ESCALATED)[:{task-id}]
+# Returns task_id via stdout.
+# -------------------------------------------------------------------
+extract_qa_task_id() {
+  local output="$1"
+  local raw_marker task_id
+  raw_marker=$(echo "$output" | grep -oE 'QA_RESULT:(PASS|FAIL|ESCALATED)(:[a-zA-Z0-9_-]+)?' | head -1)
+  task_id=$(echo "$raw_marker" | cut -d: -f3)
+  [ -z "$task_id" ] && task_id="global"
+  echo "$task_id"
+}
+
+# -------------------------------------------------------------------
 # Parse QA_RESULT marker from output and update qaRetryCount/qaEscalated
 # Format: QA_RESULT:PASS | QA_RESULT:FAIL[:task-id] | QA_RESULT:ESCALATED[:task-id]
 #
@@ -384,6 +482,67 @@ handle_qa_result_marker() {
 }
 
 # -------------------------------------------------------------------
+# Shared QA regression dispatcher — called by handle_qa_unit_stop and
+# handle_qa_integration_stop after handle_qa_result_marker returns.
+#
+# Arguments:
+#   $1 — result string: PASS | FAIL | ESCALATED
+#   $2 — raw output (used to re-extract task_id)
+#
+# Dispatches regress_to_phase on FAIL/ESCALATED.
+# Logs failure to exec.log but does NOT propagate non-zero exit codes.
+#
+# NOTE: The .agent-stack pop in the main stop handler (lines above this
+# function) runs BEFORE any handle_qa_*_stop call.  By the time this
+# function executes, the agent has already been removed from the stack,
+# so SC-REGRESS-01 (.agent-stack non-empty guard) will NOT trigger.
+# -------------------------------------------------------------------
+_dispatch_qa_regression() {
+  local result="$1"
+  local output="$2"
+
+  case "$result" in
+    PASS)
+      # No regression on PASS
+      return 0
+      ;;
+    FAIL)
+      local task_id
+      task_id=$(extract_qa_task_id "$output")
+
+      local retry_count
+      retry_count=$(state_read "qaRetryCount.${task_id}")
+      retry_count=${retry_count:-0}
+      # state_read may return "null" for missing key
+      [ "$retry_count" = "null" ] && retry_count=0
+
+      # shellcheck source=/dev/null
+      source "$SCRIPT_DIR/regress-to-phase.sh"
+
+      if [ "$retry_count" -ge "$QA_MAX_RETRIES" ]; then
+        regress_to_phase "taskmgr" \
+          "QA retry exhausted for ${task_id} (count=${retry_count})" \
+          "--force" 2>>"$BATON_LOG_DIR/exec.log" || true
+      else
+        regress_to_phase "worker" \
+          "QA failure retry #${retry_count} for ${task_id}" \
+          2>>"$BATON_LOG_DIR/exec.log" || true
+      fi
+      ;;
+    ESCALATED)
+      local task_id
+      task_id=$(extract_qa_task_id "$output")
+
+      # shellcheck source=/dev/null
+      source "$SCRIPT_DIR/regress-to-phase.sh"
+      regress_to_phase "taskmgr" \
+        "QA escalated for ${task_id}" \
+        "--force" 2>>"$BATON_LOG_DIR/exec.log" || true
+      ;;
+  esac
+}
+
+# -------------------------------------------------------------------
 # Handle QA agent completion — parse QA_RESULT marker
 # -------------------------------------------------------------------
 handle_qa_unit_stop() {
@@ -396,6 +555,8 @@ handle_qa_unit_stop() {
   if [ "$result" = "PASS" ]; then
     state_write "phaseFlags.qaUnitPassed" "true"
   fi
+
+  _dispatch_qa_regression "$result" "$output"
 }
 
 handle_qa_integration_stop() {
@@ -408,6 +569,8 @@ handle_qa_integration_stop() {
   if [ "$result" = "PASS" ]; then
     state_write "phaseFlags.qaIntegrationPassed" "true"
   fi
+
+  _dispatch_qa_regression "$result" "$output"
 }
 
 # -------------------------------------------------------------------
