@@ -489,7 +489,7 @@ case "$EVENT" in
   stop)
     # Remove last agent from stack (existing behavior)
     if [ -f "$AGENT_STACK_FILE" ]; then
-      sed -i '' '$d' "$AGENT_STACK_FILE" 2>/dev/null || true
+      prune_last_line "$AGENT_STACK_FILE"
       [ -s "$AGENT_STACK_FILE" ] || rm -f "$AGENT_STACK_FILE"
     fi
 

@@ -313,6 +313,14 @@ state_set_phase() {
   state_write "currentPhase" "$phase"
 }
 
+# prune_last_line FILE — removes the last line from FILE portably (POSIX, no sed -i)
+prune_last_line() {
+  local file="$1"
+  [ -f "$file" ] || return 0
+  local tmp="${file}.tmp.$$"
+  awk 'NR>1{print prev} {prev=$0}' "$file" > "$tmp" && mv "$tmp" "$file"
+}
+
 state_summary() {
   if [ ! -f "$STATE_FILE" ]; then
     state_init 2>/dev/null || true

@@ -6,6 +6,9 @@
 
 [ -d ".baton" ] || exit 0
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/state-manager.sh"
+
 LOG_DIR=".baton/logs"
 mkdir -p "$LOG_DIR"
 echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] STOP_FAILURE: Agent stopped due to API error" >> "$LOG_DIR/exec.log"
@@ -13,7 +16,7 @@ echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] STOP_FAILURE: Agent stopped due to API 
 # Clean stale agent-stack entry (same logic as agent-logger.sh stop)
 AGENT_STACK_FILE="$LOG_DIR/.agent-stack"
 if [ -f "$AGENT_STACK_FILE" ]; then
-  sed -i '' '$d' "$AGENT_STACK_FILE" 2>/dev/null || true
+  prune_last_line "$AGENT_STACK_FILE"
   [ -s "$AGENT_STACK_FILE" ] || rm -f "$AGENT_STACK_FILE"
 fi
 
