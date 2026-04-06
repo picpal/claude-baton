@@ -637,11 +637,18 @@ case "$EVENT" in
     START_AGENT_TYPE=$(detect_agent_type "$AGENT_NAME")
     if [ "$START_AGENT_TYPE" = "analysis" ]; then
       CURRENT_PHASE=$(state_get_phase 2>/dev/null)
-      if [ "$CURRENT_PHASE" = "done" ] || [ "$CURRENT_PHASE" = "idle" ]; then
-        # Force-reset state.json for fresh pipeline
-        rm -f "$STATE_FILE"
-        state_init
-        state_set_phase "analysis"
+      if [ -z "$CURRENT_PHASE" ] || [ "$CURRENT_PHASE" = "done" ] || [ "$CURRENT_PHASE" = "idle" ]; then
+        # Ensure state.json exists before calling regress_to_phase (fresh project guard)
+        if [ ! -f "$STATE_FILE" ]; then
+          state_init
+        fi
+        # Stale agent-stack from a prior pipeline MUST not block the new pipeline's regression
+        # Only clear when done/idle/empty — by definition no live agents remain
+        rm -f "$AGENT_STACK_FILE"
+        # Use atomic regression instead of rm+init to avoid race conditions
+        # shellcheck source=/dev/null
+        source "$SCRIPT_DIR/regress-to-phase.sh"
+        regress_to_phase "analysis" "New pipeline — analysis restart" "--force" 2>/dev/null || true
       fi
     fi
 
