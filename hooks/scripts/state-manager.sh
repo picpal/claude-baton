@@ -3,14 +3,16 @@
 # Usage: source "$SCRIPT_DIR/state-manager.sh"
 #
 # Functions:
-#   state_migrate     - Add missing fields to existing state.json (schema migration)
-#   state_init        - Create state.json with initial schema if missing; migrates existing
-#   state_read        - Read a field (dot notation) from state.json
-#   state_write       - Update a field in state.json (auto-updates timestamp)
-#   state_get_tier    - Shorthand: read currentTier
-#   state_get_phase   - Shorthand: read currentPhase
-#   state_set_phase   - Shorthand: update currentPhase
-#   state_summary     - Print one-line status summary
+#   state_migrate      - Add missing fields to existing state.json (schema migration)
+#   state_init         - Create state.json with initial schema if missing; migrates existing
+#   state_read         - Read a field (dot notation) from state.json
+#   state_write        - Update a field in state.json (auto-updates timestamp)
+#   state_array_len    - Return the length of an array field
+#   state_array_clear  - Clear an array field to []
+#   state_get_tier     - Shorthand: read currentTier
+#   state_get_phase    - Shorthand: read currentPhase
+#   state_set_phase    - Shorthand: update currentPhase
+#   state_summary      - Print one-line status summary
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/find-baton-root.sh"
@@ -33,9 +35,9 @@ with open(state_file, 'r') as f:
 current_version = data.get('version', 1)
 changed = False
 
-# Full default schema (version 2)
+# Full default schema (version 3)
 default_schema = {
-    'version': 2,
+    'version': 3,
     'currentTier': None,
     'currentPhase': 'idle',
     'phaseFlags': {
@@ -53,7 +55,10 @@ default_schema = {
     'reviewTracker': { 'expected': 0, 'completed': [] },
     'workerTracker': { 'expected': 0, 'doneCount': 0 },
     'qaRetryCount': {},
-    'reworkStatus': { 'active': False, 'attemptCount': 0 },
+    'reworkStatus': { 'active': False, 'attemptCount': 0, 'hasWarnings': False },
+    'regressionHistory': [],
+    'artifactStale': {},
+    'lastCommitAttemptCount': 0,
     'securityHalt': False,
     'lastSafeTag': None,
     'issueNumber': None,
@@ -108,7 +113,7 @@ import json, os
 state_file = os.environ['BATON_STATE_FILE']
 
 state = {
-    'version': 2,
+    'version': 3,
     'currentTier': None,
     'currentPhase': 'idle',
     'phaseFlags': {
@@ -126,7 +131,10 @@ state = {
     'reviewTracker': { 'expected': 0, 'completed': [] },
     'workerTracker': { 'expected': 0, 'doneCount': 0 },
     'qaRetryCount': {},
-    'reworkStatus': { 'active': False, 'attemptCount': 0 },
+    'reworkStatus': { 'active': False, 'attemptCount': 0, 'hasWarnings': False },
+    'regressionHistory': [],
+    'artifactStale': {},
+    'lastCommitAttemptCount': 0,
     'securityHalt': False,
     'lastSafeTag': None,
     'issueNumber': None,
@@ -285,6 +293,11 @@ if isinstance(val, list):
 else:
     print('0')
 " 2>/dev/null || echo "0"
+}
+
+state_array_clear() {
+  local field="$1"
+  state_write "$field" "[]"
 }
 
 state_get_tier() {
