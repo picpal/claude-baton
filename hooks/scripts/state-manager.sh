@@ -391,6 +391,101 @@ prune_last_line() {
   awk 'NR>1{print prev} {prev=$0}' "$file" > "$tmp" && mv "$tmp" "$file"
 }
 
+# prune_stale_stack_entries — removes entries with empty AGENT_NAME or older than TTL
+# Usage: prune_stale_stack_entries [stack_file]
+# Env: STACK_TTL_SECONDS (default 7200 = 2 hours)
+# Returns: prints count of removed entries to stdout
+prune_stale_stack_entries() {
+  local stack_file="${1:-$BATON_LOG_DIR/.agent-stack}"
+  [ -f "$stack_file" ] || { echo "0"; return 0; }
+
+  STACK_FILE="$stack_file" \
+  STACK_TTL_SECONDS="${STACK_TTL_SECONDS:-7200}" \
+  BATON_EXEC_LOG="${BATON_LOG_DIR}/exec.log" \
+  python3 - <<'PYEOF'
+import os, sys, tempfile
+from datetime import datetime, timezone
+
+stack_file = os.environ['STACK_FILE']
+ttl = int(os.environ.get('STACK_TTL_SECONDS', 7200))
+exec_log = os.environ.get('BATON_EXEC_LOG', '')
+now = datetime.now(timezone.utc)
+
+removed = 0
+kept = []
+removed_entries = []
+
+try:
+    with open(stack_file) as fh:
+        lines = fh.readlines()
+except FileNotFoundError:
+    print(0)
+    sys.exit(0)
+
+for line in lines:
+    line_stripped = line.rstrip('\n')
+    if not line_stripped:
+        continue
+
+    parts = line_stripped.split('|', 1)
+    timestamp_str = parts[0]
+    agent_name = parts[1] if len(parts) > 1 else ''
+
+    # Reason 1: empty AGENT_NAME (legacy migration zombies)
+    if not agent_name.strip():
+        removed += 1
+        removed_entries.append((agent_name, timestamp_str, 'empty'))
+        continue
+
+    # Reason 2: older than TTL
+    try:
+        ts = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+        age = (now - ts).total_seconds()
+        if age > ttl:
+            removed += 1
+            removed_entries.append((agent_name, timestamp_str, 'ttl'))
+            continue
+    except (ValueError, TypeError):
+        # Unparseable timestamp = zombie
+        removed += 1
+        removed_entries.append((agent_name, timestamp_str, 'ttl'))
+        continue
+
+    kept.append(line)
+
+if removed > 0:
+    # Atomic write — same pattern as other state mutators
+    dir_name = os.path.dirname(stack_file)
+    tmp_path = None
+    try:
+        with tempfile.NamedTemporaryFile('w', dir=dir_name, delete=False) as tf:
+            tf.writelines(kept)
+            tmp_path = tf.name
+        os.replace(tmp_path, stack_file)
+        tmp_path = None
+    finally:
+        if tmp_path is not None and os.path.exists(tmp_path):
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+
+    # Write STACK_PRUNE log entries for each removed entry
+    if exec_log:
+        now_str = now.strftime('%Y-%m-%dT%H:%M:%SZ')
+        try:
+            with open(exec_log, 'a') as log_fh:
+                for (entry_agent, entry_ts, reason) in removed_entries:
+                    log_fh.write(
+                        f'[{now_str}] STACK_PRUNE agent={entry_agent} ts={entry_ts} reason={reason}\n'
+                    )
+        except OSError:
+            pass
+
+print(removed)
+PYEOF
+}
+
 state_summary() {
   if [ ! -f "$STATE_FILE" ]; then
     state_init 2>/dev/null || true
