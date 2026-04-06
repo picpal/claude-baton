@@ -25,74 +25,96 @@ state_migrate() {
   fi
 
   BATON_STATE_FILE="$STATE_FILE" python3 -c "
-import json, os
+import json, os, tempfile, fcntl
 
 state_file = os.environ['BATON_STATE_FILE']
+lock_path = os.path.join(os.path.dirname(state_file), '.state.lock')
 
-with open(state_file, 'r') as f:
-    data = json.load(f)
+# --- BEGIN LOCKED STATE MUTATION (fcntl.flock + atomic os.replace) ---
+with open(lock_path, 'w') as lock_fd:
+    fcntl.flock(lock_fd.fileno(), fcntl.LOCK_EX)
 
-current_version = data.get('version', 1)
-changed = False
+    if os.environ.get('SLOW_MUTATE') == '1':
+        import time
+        time.sleep(0.2)
 
-# Full default schema (version 3)
-default_schema = {
-    'version': 3,
-    'currentTier': None,
-    'currentPhase': 'idle',
-    'phaseFlags': {
-        'analysisCompleted': False,
-        'interviewCompleted': False,
-        'planningCompleted': False,
-        'taskMgrCompleted': False,
-        'workerCompleted': False,
-        'qaUnitPassed': False,
-        'qaIntegrationPassed': False,
-        'reviewCompleted': False,
-        'issueRegistered': False
-    },
-    'planningTracker': { 'expected': 0, 'completed': [] },
-    'reviewTracker': { 'expected': 0, 'completed': [] },
-    'workerTracker': { 'expected': 0, 'doneCount': 0 },
-    'qaRetryCount': {},
-    'reworkStatus': { 'active': False, 'attemptCount': 0, 'hasWarnings': False },
-    'regressionHistory': [],
-    'artifactStale': {},
-    'lastCommitAttemptCount': 0,
-    'securityHalt': False,
-    'lastSafeTag': None,
-    'issueNumber': None,
-    'issueUrl': None,
-    'issueLabels': [],
-    'isExistingIssue': False,
-    'timestamp': ''
-}
+    with open(state_file, 'r') as f:
+        data = json.load(f)
 
-# Add missing top-level fields
-for key, default_val in default_schema.items():
-    if key == 'version':
-        continue
-    if key not in data:
-        data[key] = default_val
+    current_version = data.get('version', 1)
+    changed = False
+
+    # Full default schema (version 3)
+    default_schema = {
+        'version': 3,
+        'currentTier': None,
+        'currentPhase': 'idle',
+        'phaseFlags': {
+            'analysisCompleted': False,
+            'interviewCompleted': False,
+            'planningCompleted': False,
+            'taskMgrCompleted': False,
+            'workerCompleted': False,
+            'qaUnitPassed': False,
+            'qaIntegrationPassed': False,
+            'reviewCompleted': False,
+            'issueRegistered': False
+        },
+        'planningTracker': { 'expected': 0, 'completed': [] },
+        'reviewTracker': { 'expected': 0, 'completed': [] },
+        'workerTracker': { 'expected': 0, 'doneCount': 0 },
+        'qaRetryCount': {},
+        'reworkStatus': { 'active': False, 'attemptCount': 0, 'hasWarnings': False },
+        'regressionHistory': [],
+        'artifactStale': {},
+        'lastCommitAttemptCount': 0,
+        'securityHalt': False,
+        'lastSafeTag': None,
+        'issueNumber': None,
+        'issueUrl': None,
+        'issueLabels': [],
+        'isExistingIssue': False,
+        'timestamp': ''
+    }
+
+    # Add missing top-level fields
+    for key, default_val in default_schema.items():
+        if key == 'version':
+            continue
+        if key not in data:
+            data[key] = default_val
+            changed = True
+
+    # Add missing nested fields for dict-type defaults
+    for key, default_val in default_schema.items():
+        if isinstance(default_val, dict) and key in data and isinstance(data[key], dict):
+            for sub_key, sub_default in default_val.items():
+                if sub_key not in data[key]:
+                    data[key][sub_key] = sub_default
+                    changed = True
+
+    # Bump version if schema changed
+    if changed or current_version < default_schema['version']:
+        data['version'] = default_schema['version']
         changed = True
 
-# Add missing nested fields for dict-type defaults
-for key, default_val in default_schema.items():
-    if isinstance(default_val, dict) and key in data and isinstance(data[key], dict):
-        for sub_key, sub_default in default_val.items():
-            if sub_key not in data[key]:
-                data[key][sub_key] = sub_default
-                changed = True
-
-# Bump version if schema changed
-if changed or current_version < default_schema['version']:
-    data['version'] = default_schema['version']
-    changed = True
-
-if changed:
-    with open(state_file, 'w') as f:
-        json.dump(data, f, indent=2)
-        f.write('\n')
+    if changed:
+        dir_name = os.path.dirname(state_file)
+        tmp_path = None
+        try:
+            with tempfile.NamedTemporaryFile('w', dir=dir_name, delete=False) as tf:
+                json.dump(data, tf, indent=2)
+                tf.write('\n')
+                tmp_path = tf.name
+            os.replace(tmp_path, state_file)
+            tmp_path = None
+        finally:
+            if tmp_path is not None and os.path.exists(tmp_path):
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
+# --- END LOCKED STATE MUTATION ---
 " 2>/dev/null
   if [ $? -ne 0 ]; then
     echo "[state-manager] state_migrate failed: could not update $STATE_FILE" >&2
@@ -108,46 +130,72 @@ state_init() {
   ensure_baton_dirs
 
   BATON_STATE_FILE="$STATE_FILE" python3 -c "
-import json, os
+import json, os, tempfile, fcntl
 
 state_file = os.environ['BATON_STATE_FILE']
-
-state = {
-    'version': 3,
-    'currentTier': None,
-    'currentPhase': 'idle',
-    'phaseFlags': {
-        'analysisCompleted': False,
-        'interviewCompleted': False,
-        'planningCompleted': False,
-        'taskMgrCompleted': False,
-        'workerCompleted': False,
-        'qaUnitPassed': False,
-        'qaIntegrationPassed': False,
-        'reviewCompleted': False,
-        'issueRegistered': False
-    },
-    'planningTracker': { 'expected': 0, 'completed': [] },
-    'reviewTracker': { 'expected': 0, 'completed': [] },
-    'workerTracker': { 'expected': 0, 'doneCount': 0 },
-    'qaRetryCount': {},
-    'reworkStatus': { 'active': False, 'attemptCount': 0, 'hasWarnings': False },
-    'regressionHistory': [],
-    'artifactStale': {},
-    'lastCommitAttemptCount': 0,
-    'securityHalt': False,
-    'lastSafeTag': None,
-    'issueNumber': None,
-    'issueUrl': None,
-    'issueLabels': [],
-    'isExistingIssue': False,
-    'timestamp': ''
-}
-
 os.makedirs(os.path.dirname(state_file), exist_ok=True)
-with open(state_file, 'w') as f:
-    json.dump(state, f, indent=2)
-    f.write('\n')
+lock_path = os.path.join(os.path.dirname(state_file), '.state.lock')
+
+# --- BEGIN LOCKED STATE MUTATION (fcntl.flock + atomic os.replace) ---
+with open(lock_path, 'w') as lock_fd:
+    fcntl.flock(lock_fd.fileno(), fcntl.LOCK_EX)
+
+    if os.environ.get('SLOW_MUTATE') == '1':
+        import time
+        time.sleep(0.2)
+
+    # Re-check inside the lock — another process may have created state.json
+    # while we were waiting for the lock. If so, do nothing (the existing
+    # state is authoritative; state_migrate handles upgrades on its own path).
+    if not os.path.exists(state_file):
+        state = {
+            'version': 3,
+            'currentTier': None,
+            'currentPhase': 'idle',
+            'phaseFlags': {
+                'analysisCompleted': False,
+                'interviewCompleted': False,
+                'planningCompleted': False,
+                'taskMgrCompleted': False,
+                'workerCompleted': False,
+                'qaUnitPassed': False,
+                'qaIntegrationPassed': False,
+                'reviewCompleted': False,
+                'issueRegistered': False
+            },
+            'planningTracker': { 'expected': 0, 'completed': [] },
+            'reviewTracker': { 'expected': 0, 'completed': [] },
+            'workerTracker': { 'expected': 0, 'doneCount': 0 },
+            'qaRetryCount': {},
+            'reworkStatus': { 'active': False, 'attemptCount': 0, 'hasWarnings': False },
+            'regressionHistory': [],
+            'artifactStale': {},
+            'lastCommitAttemptCount': 0,
+            'securityHalt': False,
+            'lastSafeTag': None,
+            'issueNumber': None,
+            'issueUrl': None,
+            'issueLabels': [],
+            'isExistingIssue': False,
+            'timestamp': ''
+        }
+
+        dir_name = os.path.dirname(state_file)
+        tmp_path = None
+        try:
+            with tempfile.NamedTemporaryFile('w', dir=dir_name, delete=False) as tf:
+                json.dump(state, tf, indent=2)
+                tf.write('\n')
+                tmp_path = tf.name
+            os.replace(tmp_path, state_file)
+            tmp_path = None
+        finally:
+            if tmp_path is not None and os.path.exists(tmp_path):
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
+# --- END LOCKED STATE MUTATION ---
 " 2>/dev/null
   if [ $? -ne 0 ]; then
     echo "[state-manager] state_init failed: could not write $STATE_FILE" >&2
@@ -211,51 +259,73 @@ state_write() {
   fi
 
   BATON_STATE_FILE="$STATE_FILE" BATON_FIELD="$field" BATON_VALUE="$value" python3 -c "
-import json, sys, os
+import json, sys, os, tempfile, fcntl
 from datetime import datetime, timezone
 
 state_file = os.environ['BATON_STATE_FILE']
 field = os.environ['BATON_FIELD']
 value_str = os.environ['BATON_VALUE']
+lock_path = os.path.join(os.path.dirname(state_file), '.state.lock')
 
-with open(state_file, 'r') as f:
-    data = json.load(f)
+# --- BEGIN LOCKED STATE MUTATION (fcntl.flock + atomic os.replace) ---
+with open(lock_path, 'w') as lock_fd:
+    fcntl.flock(lock_fd.fileno(), fcntl.LOCK_EX)
 
-keys = field.split('.')
+    if os.environ.get('SLOW_MUTATE') == '1':
+        import time
+        time.sleep(0.2)
 
-# Parse the value
-if value_str == 'true':
-    parsed = True
-elif value_str == 'false':
-    parsed = False
-elif value_str == 'null':
-    parsed = None
-else:
-    try:
-        parsed = json.loads(value_str)
-    except (json.JSONDecodeError, ValueError):
+    with open(state_file, 'r') as f:
+        data = json.load(f)
+
+    keys = field.split('.')
+
+    # Parse the value
+    if value_str == 'true':
+        parsed = True
+    elif value_str == 'false':
+        parsed = False
+    elif value_str == 'null':
+        parsed = None
+    else:
         try:
-            parsed = int(value_str)
-        except ValueError:
+            parsed = json.loads(value_str)
+        except (json.JSONDecodeError, ValueError):
             try:
-                parsed = float(value_str)
+                parsed = int(value_str)
             except ValueError:
-                parsed = value_str
+                try:
+                    parsed = float(value_str)
+                except ValueError:
+                    parsed = value_str
 
-# Navigate to the parent and set the value
-obj = data
-for k in keys[:-1]:
-    if k not in obj or not isinstance(obj[k], dict):
-        obj[k] = {}
-    obj = obj[k]
-obj[keys[-1]] = parsed
+    # Navigate to the parent and set the value
+    obj = data
+    for k in keys[:-1]:
+        if k not in obj or not isinstance(obj[k], dict):
+            obj[k] = {}
+        obj = obj[k]
+    obj[keys[-1]] = parsed
 
-# Always update timestamp
-data['timestamp'] = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+    # Always update timestamp
+    data['timestamp'] = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 
-with open(state_file, 'w') as f:
-    json.dump(data, f, indent=2)
-    f.write('\n')
+    dir_name = os.path.dirname(state_file)
+    tmp_path = None
+    try:
+        with tempfile.NamedTemporaryFile('w', dir=dir_name, delete=False) as tf:
+            json.dump(data, tf, indent=2)
+            tf.write('\n')
+            tmp_path = tf.name
+        os.replace(tmp_path, state_file)
+        tmp_path = None
+    finally:
+        if tmp_path is not None and os.path.exists(tmp_path):
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+# --- END LOCKED STATE MUTATION ---
 " 2>/dev/null
   if [ $? -ne 0 ]; then
     echo "[state-manager] state_write failed for field: $field" >&2
