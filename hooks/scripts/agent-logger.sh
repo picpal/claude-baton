@@ -240,12 +240,12 @@ handle_analysis_stop() {
 
   if [ -n "$tier" ]; then
     state_write "currentTier" "$tier"
+    state_write "workerTracker.expected" "1"
 
     case "$tier" in
       1)
         state_write "planningTracker.expected" "0"
         state_write "reviewTracker.expected" "0"
-        state_write "workerTracker.expected" "1"
         # Tier 1 skips: interview, planning, taskmgr, integration QA, review
         local issue_reg
         issue_reg=$(state_read "phaseFlags.issueRegistered")
@@ -261,12 +261,10 @@ handle_analysis_stop() {
       2)
         state_write "planningTracker.expected" "1"
         state_write "reviewTracker.expected" "3"
-        state_write "workerTracker.expected" "1"
         ;;
       3)
         state_write "planningTracker.expected" "3"
         state_write "reviewTracker.expected" "5"
-        state_write "workerTracker.expected" "1"
         ;;
     esac
   fi
@@ -322,7 +320,6 @@ handle_taskmgr_stop() {
   count=$(echo "$output" | grep -oE 'WORKER_COUNT:[0-9]+' | head -1 | cut -d: -f2)
   if [ -n "$count" ] && [ "$count" -gt 0 ] 2>/dev/null; then
     state_write "workerTracker.expected" "$count"
-    state_write "workerTracker.doneCount" "0"
   fi
 }
 
@@ -342,6 +339,51 @@ handle_worker_stop() {
 }
 
 # -------------------------------------------------------------------
+# Parse QA_RESULT marker from output and update qaRetryCount/qaEscalated
+# Format: QA_RESULT:PASS | QA_RESULT:FAIL[:task-id] | QA_RESULT:ESCALATED[:task-id]
+#
+# Returns the result type (PASS|FAIL|ESCALATED) via stdout
+# Side effects: updates qaRetryCount and qaEscalated in state.json
+# -------------------------------------------------------------------
+handle_qa_result_marker() {
+  local output="$1"
+
+  # Match full marker including optional task-id
+  local raw_marker
+  raw_marker=$(echo "$output" | grep -oE 'QA_RESULT:(PASS|FAIL|ESCALATED)(:[a-zA-Z0-9_-]+)?' | head -1)
+  [ -z "$raw_marker" ] && { echo ""; return; }
+
+  # Split on colon: field[0]=QA_RESULT field[1]=result field[2]=task-id (optional)
+  local result task_id
+  result=$(echo "$raw_marker" | cut -d: -f2)
+  task_id=$(echo "$raw_marker" | cut -d: -f3)
+  [ -z "$task_id" ] && task_id="global"
+
+  case "$result" in
+    PASS)
+      # No qaRetryCount update on PASS
+      ;;
+    FAIL)
+      # Increment qaRetryCount.{task-id}
+      local current
+      current=$(state_read "qaRetryCount.$task_id")
+      if [ "$current" = "null" ] || [ -z "$current" ]; then
+        current=0
+      fi
+      local new_count=$(( current + 1 ))
+      state_write "qaRetryCount.$task_id" "$new_count"
+      ;;
+    ESCALATED)
+      # Set qaRetryCount.{task-id}=99 and qaEscalated.{task-id}=true
+      state_write "qaRetryCount.$task_id" "99"
+      state_write "qaEscalated.$task_id" "true"
+      ;;
+  esac
+
+  echo "$result"
+}
+
+# -------------------------------------------------------------------
 # Handle QA agent completion — parse QA_RESULT marker
 # -------------------------------------------------------------------
 handle_qa_unit_stop() {
@@ -349,7 +391,7 @@ handle_qa_unit_stop() {
   output=$(get_agent_output)
 
   local result
-  result=$(echo "$output" | grep -oE 'QA_RESULT:(PASS|FAIL)' | head -1 | cut -d: -f2)
+  result=$(handle_qa_result_marker "$output")
 
   if [ "$result" = "PASS" ]; then
     state_write "phaseFlags.qaUnitPassed" "true"
@@ -361,7 +403,7 @@ handle_qa_integration_stop() {
   output=$(get_agent_output)
 
   local result
-  result=$(echo "$output" | grep -oE 'QA_RESULT:(PASS|FAIL)' | head -1 | cut -d: -f2)
+  result=$(handle_qa_result_marker "$output")
 
   if [ "$result" = "PASS" ]; then
     state_write "phaseFlags.qaIntegrationPassed" "true"
@@ -390,14 +432,8 @@ activate_rework_if_needed() {
   state_write "phaseFlags.reviewCompleted" "false"
   state_write "workerTracker.doneCount" "0"
   # Reset reviewTracker.completed to empty array and clear hasWarnings
-  python3 -c "
-import json, sys
-f = sys.argv[1]
-with open(f) as fh: d = json.load(fh)
-d['reviewTracker']['completed'] = []
-d['reworkStatus']['hasWarnings'] = False
-with open(f, 'w') as fh: json.dump(d, fh, indent=2, ensure_ascii=False)
-" "$STATE_FILE"
+  state_write "reviewTracker.completed" "[]"
+  state_write "reworkStatus.hasWarnings" "false"
 }
 
 # -------------------------------------------------------------------
