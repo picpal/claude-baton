@@ -312,6 +312,174 @@ rm -rf "$TEST_ROOT"
 echo ""
 
 # ─────────────────────────────────────────────────
+# Test Group 5: taskmgr stop does NOT reset doneCount
+# (Verifies redundant doneCount=0 was removed from handle_taskmgr_stop)
+# ─────────────────────────────────────────────────
+echo "--- Test Group 5: handle_taskmgr_stop does not reset doneCount ---"
+
+# 5a: When doneCount is pre-set to 5, taskmgr stop with WORKER_COUNT:3 should
+#     update expected=3 but NOT forcibly reset doneCount back to 0.
+#     (After refactor: doneCount is not touched by handle_taskmgr_stop)
+TEST_ROOT=$(mktemp -d)
+mkdir -p "$TEST_ROOT/.baton/logs"
+python3 -c "
+import json
+state = {
+    'version': 2,
+    'currentTier': 2,
+    'currentPhase': 'taskmgr',
+    'phaseFlags': {
+        'analysisCompleted': True,
+        'interviewCompleted': True,
+        'planningCompleted': True,
+        'taskMgrCompleted': False,
+        'workerCompleted': False,
+        'qaUnitPassed': False,
+        'qaIntegrationPassed': False,
+        'reviewCompleted': False,
+        'issueRegistered': True
+    },
+    'planningTracker': { 'expected': 1, 'completed': ['Planning Agent'] },
+    'reviewTracker': { 'expected': 3, 'completed': [] },
+    'workerTracker': { 'expected': 1, 'doneCount': 5 },
+    'qaRetryCount': {},
+    'reworkStatus': { 'active': False, 'attemptCount': 0 },
+    'securityHalt': False,
+    'lastSafeTag': None,
+    'issueNumber': None,
+    'issueUrl': None,
+    'issueLabels': [],
+    'isExistingIssue': False,
+    'timestamp': ''
+}
+with open('$TEST_ROOT/.baton/state.json', 'w') as f:
+    json.dump(state, f, indent=2)
+    f.write('\n')
+"
+json_data=$(make_taskmgr_stop_json "3")
+run_agent_stop "$TEST_ROOT" "$json_data"
+actual_expected=$(read_state_field "$TEST_ROOT" "workerTracker.expected")
+actual_done=$(read_state_field "$TEST_ROOT" "workerTracker.doneCount")
+assert_eq "5a: taskmgr WORKER_COUNT:3 -> workerTracker.expected=3" "3" "$actual_expected"
+assert_eq "5a: taskmgr stop does not reset doneCount (stays 5)" "5" "$actual_done"
+rm -rf "$TEST_ROOT"
+
+echo ""
+
+# ─────────────────────────────────────────────────
+# Test Group 6: activate_rework_if_needed uses state_write for array/bool resets
+# (Verifies python3 inline removal didn't break reviewTracker.completed and hasWarnings reset)
+# ─────────────────────────────────────────────────
+echo "--- Test Group 6: activate_rework_if_needed state_write-based resets ---"
+
+# Helper: create a mock review stop event JSON
+make_review_stop_json_local() {
+  local agent_name="$1"
+  local output_text="$2"
+  python3 -c "
+import json, sys
+agent_name = sys.argv[1]
+output_text = sys.argv[2]
+print(json.dumps({
+    'hook_event_name': 'SubagentStop',
+    'session_id': 'test-session',
+    'agent_name': agent_name,
+    'tool_response': {
+        'content': output_text
+    }
+}, ensure_ascii=False))
+" "$agent_name" "$output_text"
+}
+
+# 6a: After rework activation via review completion, reviewTracker.completed == []
+TEST_ROOT=$(mktemp -d)
+mkdir -p "$TEST_ROOT/.baton/logs"
+python3 -c "
+import json
+state = {
+    'version': 2,
+    'currentTier': 2,
+    'currentPhase': 'review',
+    'phaseFlags': {
+        'analysisCompleted': True,
+        'interviewCompleted': True,
+        'planningCompleted': True,
+        'taskMgrCompleted': True,
+        'workerCompleted': True,
+        'qaUnitPassed': True,
+        'qaIntegrationPassed': True,
+        'reviewCompleted': False,
+        'issueRegistered': True
+    },
+    'planningTracker': { 'expected': 1, 'completed': ['Planning Agent'] },
+    'reviewTracker': { 'expected': 3, 'completed': ['Security Guardian', 'Quality Inspector'] },
+    'workerTracker': { 'expected': 2, 'doneCount': 2 },
+    'qaRetryCount': {},
+    'reworkStatus': { 'active': False, 'attemptCount': 0, 'hasWarnings': True },
+    'securityHalt': False,
+    'lastSafeTag': None,
+    'issueNumber': None,
+    'issueUrl': None,
+    'issueLabels': [],
+    'isExistingIssue': False,
+    'timestamp': ''
+}
+with open('$TEST_ROOT/.baton/state.json', 'w') as f:
+    json.dump(state, f, indent=2)
+    f.write('\n')
+"
+json_data=$(make_review_stop_json_local "TDD Enforcer: tdd-check" "All tests pass.")
+echo "$json_data" | BATON_ROOT="$TEST_ROOT" bash "$AGENT_LOGGER" stop > /dev/null 2>&1 || true
+actual=$(read_state_field "$TEST_ROOT" "reviewTracker.completed")
+assert_eq "6a: rework activation -> reviewTracker.completed reset to []" "[]" "$actual"
+rm -rf "$TEST_ROOT"
+
+# 6b: After rework activation, reworkStatus.hasWarnings == false
+TEST_ROOT=$(mktemp -d)
+mkdir -p "$TEST_ROOT/.baton/logs"
+python3 -c "
+import json
+state = {
+    'version': 2,
+    'currentTier': 2,
+    'currentPhase': 'review',
+    'phaseFlags': {
+        'analysisCompleted': True,
+        'interviewCompleted': True,
+        'planningCompleted': True,
+        'taskMgrCompleted': True,
+        'workerCompleted': True,
+        'qaUnitPassed': True,
+        'qaIntegrationPassed': True,
+        'reviewCompleted': False,
+        'issueRegistered': True
+    },
+    'planningTracker': { 'expected': 1, 'completed': ['Planning Agent'] },
+    'reviewTracker': { 'expected': 3, 'completed': ['Security Guardian', 'Quality Inspector'] },
+    'workerTracker': { 'expected': 2, 'doneCount': 2 },
+    'qaRetryCount': {},
+    'reworkStatus': { 'active': False, 'attemptCount': 0, 'hasWarnings': True },
+    'securityHalt': False,
+    'lastSafeTag': None,
+    'issueNumber': None,
+    'issueUrl': None,
+    'issueLabels': [],
+    'isExistingIssue': False,
+    'timestamp': ''
+}
+with open('$TEST_ROOT/.baton/state.json', 'w') as f:
+    json.dump(state, f, indent=2)
+    f.write('\n')
+"
+json_data=$(make_review_stop_json_local "TDD Enforcer: tdd-check" "All tests pass.")
+echo "$json_data" | BATON_ROOT="$TEST_ROOT" bash "$AGENT_LOGGER" stop > /dev/null 2>&1 || true
+actual=$(read_state_field "$TEST_ROOT" "reworkStatus.hasWarnings")
+assert_eq "6b: rework activation -> reworkStatus.hasWarnings reset to false" "false" "$actual"
+rm -rf "$TEST_ROOT"
+
+echo ""
+
+# ─────────────────────────────────────────────────
 # Summary
 # ─────────────────────────────────────────────────
 echo "=== Summary ==="

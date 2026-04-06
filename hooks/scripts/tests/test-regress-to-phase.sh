@@ -703,6 +703,34 @@ actual=$(read_state_field "$TEST_ROOT" "phaseFlags.issueRegistered")
 assert_true "8g: issueRegistered=true preserved across analysis regression" "$actual"
 rm -rf "$TEST_ROOT"
 
+# 8h: reworkStatus.regressionTarget set to target after shallow regression
+# (M1 fix: phase-gate.sh reads this field for regression-aware gating)
+TEST_ROOT=$(mktemp -d)
+mkdir -p "$TEST_ROOT/.baton/logs"
+write_test_state "$TEST_ROOT" 2 "review"
+run_regress "$TEST_ROOT" "qa" "regression target shallow"
+actual=$(read_state_field "$TEST_ROOT" "reworkStatus.regressionTarget")
+assert_eq "8h: reworkStatus.regressionTarget=qa after qa regression" "qa" "$actual"
+rm -rf "$TEST_ROOT"
+
+# 8i: reworkStatus.regressionTarget set to target after deep regression with --force
+TEST_ROOT=$(mktemp -d)
+mkdir -p "$TEST_ROOT/.baton/logs"
+write_test_state "$TEST_ROOT" 2 "review"
+run_regress "$TEST_ROOT" "planning" "regression target deep" "--force"
+actual=$(read_state_field "$TEST_ROOT" "reworkStatus.regressionTarget")
+assert_eq "8i: reworkStatus.regressionTarget=planning after planning regression --force" "planning" "$actual"
+rm -rf "$TEST_ROOT"
+
+# 8j: reworkStatus.regressionTarget=worker after worker target
+TEST_ROOT=$(mktemp -d)
+mkdir -p "$TEST_ROOT/.baton/logs"
+write_test_state "$TEST_ROOT" 2 "review"
+run_regress "$TEST_ROOT" "worker" "regression target worker" "--force"
+actual=$(read_state_field "$TEST_ROOT" "reworkStatus.regressionTarget")
+assert_eq "8j: reworkStatus.regressionTarget=worker after worker regression --force" "worker" "$actual"
+rm -rf "$TEST_ROOT"
+
 echo ""
 
 # ─────────────────────────────────────────────────

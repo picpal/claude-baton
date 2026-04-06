@@ -175,11 +175,20 @@ data['regressionPending'] = {
 data['timestamp'] = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 
 dir_name = os.path.dirname(state_file)
-with tempfile.NamedTemporaryFile('w', dir=dir_name, delete=False) as tf:
-    json.dump(data, tf, indent=2)
-    tf.write('\n')
-    tmp_path = tf.name
-os.replace(tmp_path, state_file)
+tmp_path = None
+try:
+    with tempfile.NamedTemporaryFile('w', dir=dir_name, delete=False) as tf:
+        json.dump(data, tf, indent=2)
+        tf.write('\n')
+        tmp_path = tf.name
+    os.replace(tmp_path, state_file)
+    tmp_path = None  # successfully replaced
+finally:
+    if tmp_path is not None and os.path.exists(tmp_path):
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
 PYEOF
     return 5
   fi
@@ -191,7 +200,7 @@ PYEOF
   BATON_REASON="$reason" \
   BATON_FROM_PHASE="$current_phase" \
   BATON_TIER="${current_tier:-null}" \
-  python3 - <<'PYEOF' 2>/dev/null
+  python3 - <<'PYEOF'
 import json, os, sys, tempfile
 from datetime import datetime, timezone
 
@@ -286,6 +295,9 @@ rework = data.setdefault('reworkStatus', {'active': False, 'attemptCount': 0, 'h
 rework['active'] = True
 rework['attemptCount'] = int(rework.get('attemptCount', 0) or 0) + 1
 rework['hasWarnings'] = False
+# regressionTarget activates phase-gate.sh's regression-aware gating —
+# only agents at or before this phase index may spawn during the rework cycle.
+rework['regressionTarget'] = target
 
 # ---------- currentPhase update ----------
 data['currentPhase'] = target
@@ -325,11 +337,20 @@ if 'regressionPending' in data:
 data['timestamp'] = now_iso
 
 dir_name = os.path.dirname(state_file)
-with tempfile.NamedTemporaryFile('w', dir=dir_name, delete=False) as tf:
-    json.dump(data, tf, indent=2)
-    tf.write('\n')
-    tmp_path = tf.name
-os.replace(tmp_path, state_file)
+tmp_path = None
+try:
+    with tempfile.NamedTemporaryFile('w', dir=dir_name, delete=False) as tf:
+        json.dump(data, tf, indent=2)
+        tf.write('\n')
+        tmp_path = tf.name
+    os.replace(tmp_path, state_file)
+    tmp_path = None  # successfully replaced
+finally:
+    if tmp_path is not None and os.path.exists(tmp_path):
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
 PYEOF
   local rc=$?
   if [ "$rc" -ne 0 ]; then

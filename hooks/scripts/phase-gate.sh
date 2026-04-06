@@ -15,7 +15,13 @@ source "$SCRIPT_DIR/state-manager.sh"
 [ -d "$BATON_DIR" ] || exit 0
 
 # -------------------------------------------------------------------
-# Detect agent type from description prefix (case-insensitive)
+# Detect agent type from agent_type field or description prefix (case-insensitive)
+# Returns: analysis|interview|planning|taskmgr|worker|qa-unit|qa-integration|review|issue-register|unknown
+#
+# NOTE: This function is duplicated in agent-logger.sh (authoritative source).
+# Both copies must be kept in sync — see plan §3 (detect_agent_type Divergence).
+# Priority 1: agent_type format (SubagentStart/Stop) — e.g., "claude-baton:security-guardian"
+# Priority 2: legacy description-prefix format — e.g., "security guardian:..."
 # -------------------------------------------------------------------
 detect_agent_type() {
   local desc="$1"
@@ -23,6 +29,28 @@ detect_agent_type() {
   lower_desc=$(echo "$desc" | tr '[:upper:]' '[:lower:]')
 
   case "$lower_desc" in
+    # ------------------------------------------------------------------
+    # agent_type format: *:suffix (SubagentStart/SubagentStop JSON field)
+    # Matches regardless of prefix (e.g., "claude-baton:worker-agent")
+    # ------------------------------------------------------------------
+    *:security-guardian)          echo "review" ;;
+    *:quality-inspector)          echo "review" ;;
+    *:tdd-enforcer-reviewer)      echo "review" ;;
+    *:performance-analyst)        echo "review" ;;
+    *:standards-keeper)           echo "review" ;;
+    *:worker-agent)               echo "worker" ;;
+    *:qa-unit)                    echo "qa-unit" ;;
+    *:qa-integration)             echo "qa-integration" ;;
+    *:analysis-agent)             echo "analysis" ;;
+    *:interview-agent)            echo "interview" ;;
+    *:planning-architect)         echo "planning" ;;
+    *:planning-security)          echo "planning" ;;
+    *:planning-dev-lead)          echo "planning" ;;
+    *:task-manager)               echo "taskmgr" ;;
+    *:issue-register)             echo "issue-register" ;;
+    # ------------------------------------------------------------------
+    # Legacy description-prefix patterns (backward compatibility)
+    # ------------------------------------------------------------------
     analysis:*|analysis\ *)       echo "analysis" ;;
     interview:*)                  echo "interview" ;;
     planning:*|planning-*)        echo "planning" ;;
@@ -37,6 +65,28 @@ detect_agent_type() {
     standards\ keeper:*)          echo "review" ;;
     issue*register*|issue\ register*) echo "issue-register" ;;
     *)                            echo "unknown" ;;
+  esac
+}
+
+# -------------------------------------------------------------------
+# Phase ordering for regression-aware gating.
+# Lower index = earlier in pipeline. Maps phase name -> index.
+# Echoes the index for the given phase, or empty if unknown.
+# -------------------------------------------------------------------
+phase_index() {
+  case "$1" in
+    issue-register) echo 0 ;;
+    analysis)       echo 1 ;;
+    interview)      echo 2 ;;
+    planning)       echo 3 ;;
+    taskmgr)        echo 4 ;;
+    worker)         echo 5 ;;
+    qa)             echo 6 ;;
+    qa-unit)        echo 6 ;;
+    qa-integration) echo 6 ;;
+    review)         echo 7 ;;
+    done)           echo 8 ;;
+    *)              echo "" ;;
   esac
 }
 
@@ -77,6 +127,7 @@ TIER=$(state_get_tier 2>/dev/null || echo "")
 PHASE=$(state_get_phase 2>/dev/null || echo "")
 SECURITY_HALT=$(state_read "securityHalt" 2>/dev/null || echo "")
 REWORK_ACTIVE=$(state_read "reworkStatus.active" 2>/dev/null || echo "")
+REGRESSION_TARGET=$(state_read "reworkStatus.regressionTarget" 2>/dev/null || echo "")
 
 # If state can't be read, allow (pre-init state)
 if [ -z "$TIER" ] && [ -z "$PHASE" ]; then
@@ -89,11 +140,69 @@ fi
 
 # Security halt — block ALL agent spawns
 if [ "$SECURITY_HALT" = "true" ]; then
-  block "⛔ [Phase Gate] Pipeline halted — Security Rollback in progress"
+  block "⛔ [Phase Gate] Pipeline halted — Security Rollback in progress
+
+A CRITICAL/HIGH security issue was detected and a Security Rollback is in progress.
+All agent spawns are blocked until the rollback completes.
+
+To recover:
+  1. Inspect lastSafeTag in .baton/state.json
+  2. Run /rollback to restore to the last safe checkpoint
+  3. Address the security finding
+  4. Clear securityHalt in state.json once the issue is resolved"
 fi
 
-# Rework mode — bypass all phase-gate checks
-if [ "$REWORK_ACTIVE" = "true" ]; then
+# -------------------------------------------------------------------
+# Regression-aware gating
+# When reworkStatus.regressionTarget is set, only allow agents whose
+# phase index is <= the target's index. Agents from later phases must
+# wait until the regression cycle completes.
+#
+# Additionally, if .agent-stack is non-empty (agents in flight), block
+# regressing agent spawns to prevent race conditions during regression.
+# -------------------------------------------------------------------
+if [ -n "$REGRESSION_TARGET" ] && [ "$REGRESSION_TARGET" != "null" ]; then
+  TARGET_IDX=$(phase_index "$REGRESSION_TARGET")
+  AGENT_IDX=$(phase_index "$AGENT_TYPE")
+
+  if [ -n "$TARGET_IDX" ] && [ -n "$AGENT_IDX" ]; then
+    if [ "$AGENT_IDX" -gt "$TARGET_IDX" ] 2>/dev/null; then
+      block "⛔ [Phase Gate] Regression in progress — $AGENT_TYPE blocked
+
+Current state:
+  Tier: $TIER
+  Phase: $PHASE
+  regressionTarget: $REGRESSION_TARGET
+
+Only agents at or before the regression target ($REGRESSION_TARGET) may spawn
+until the regression cycle completes."
+    fi
+  fi
+
+  # Fail-fast on .agent-stack non-empty during regression
+  AGENT_STACK_FILE="$BATON_LOG_DIR/.agent-stack"
+  if [ -f "$AGENT_STACK_FILE" ] && [ -s "$AGENT_STACK_FILE" ]; then
+    block "⛔ [Phase Gate] Regression in progress — agents still in flight
+
+Current state:
+  Tier: $TIER
+  Phase: $PHASE
+  regressionTarget: $REGRESSION_TARGET
+  .agent-stack: non-empty
+
+Cannot spawn $AGENT_TYPE while previous agents are still running.
+Wait for in-flight agents to complete (SubagentStop hooks fire) and retry."
+  fi
+
+  # Regression target matches (or is earlier than) the spawning agent — allow
+  # but still run prerequisite checks below to enforce phaseFlag ordering.
+fi
+
+# Rework mode (without explicit regressionTarget) — bypass all phase-gate checks
+# This preserves backward compatibility for legacy rework cycles that don't set
+# regressionTarget yet (T2 will retire this branch once activate_rework_if_needed
+# delegates to regress_to_phase()).
+if [ "$REWORK_ACTIVE" = "true" ] && { [ -z "$REGRESSION_TARGET" ] || [ "$REGRESSION_TARGET" = "null" ]; }; then
   exit 0
 fi
 
