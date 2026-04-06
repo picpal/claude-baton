@@ -412,28 +412,30 @@ handle_qa_integration_stop() {
 
 # -------------------------------------------------------------------
 # Activate rework mode if any reviewer reported warnings
-# Resets worker/QA/review flags so pipeline re-enters worker phase
+# Delegates to regress_to_phase("worker") which atomically resets
+# worker/QA/review flags, increments attemptCount, and sets reworkStatus.active=true
+#
+# NOTE: .agent-stack is already cleared by the stop handler before this
+# function is called, so SC-REGRESS-01 will not trigger.
 # -------------------------------------------------------------------
 activate_rework_if_needed() {
   local has_warnings
   has_warnings=$(state_read "reworkStatus.hasWarnings")
   [ "$has_warnings" != "true" ] && return 0
 
-  state_write "reworkStatus.active" "true"
-  local attempt
-  attempt=$(state_read "reworkStatus.attemptCount")
-  attempt=$((${attempt:-0} + 1))
-  state_write "reworkStatus.attemptCount" "$attempt"
-
-  # Reset flags to re-enter worker→QA→review cycle
-  state_write "phaseFlags.workerCompleted" "false"
-  state_write "phaseFlags.qaUnitPassed" "false"
-  state_write "phaseFlags.qaIntegrationPassed" "false"
-  state_write "phaseFlags.reviewCompleted" "false"
-  state_write "workerTracker.doneCount" "0"
-  # Reset reviewTracker.completed to empty array and clear hasWarnings
-  state_write "reviewTracker.completed" "[]"
-  state_write "reworkStatus.hasWarnings" "false"
+  # Source regress-to-phase.sh and delegate all state mutations to it.
+  # regress_to_phase("worker") atomically:
+  #   - resets phaseFlags: workerCompleted, qaUnitPassed, qaIntegrationPassed, reviewCompleted → false
+  #   - resets workerTracker.doneCount and workerTracker.expected to 0
+  #   - resets reviewTracker.completed to []
+  #   - increments reworkStatus.attemptCount
+  #   - sets reworkStatus.active=true and reworkStatus.hasWarnings=false
+  #   - sets currentPhase="worker"
+  # --force is required because review→worker is depth=2 (review=7, worker=5).
+  # This is a known automatic internal transition; --force is intentional.
+  # shellcheck source=/dev/null
+  source "$SCRIPT_DIR/regress-to-phase.sh"
+  regress_to_phase "worker" "Reviewer reported warnings — auto-rework" "--force"
 }
 
 # -------------------------------------------------------------------
