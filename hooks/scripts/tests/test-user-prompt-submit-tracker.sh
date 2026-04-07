@@ -258,6 +258,125 @@ rm -rf "$TEST_ROOT"
 echo ""
 
 # ─────────────────────────────────────────────────
+# Helpers for stale-stack tests
+# ─────────────────────────────────────────────────
+now_ts() {
+  date -u '+%Y-%m-%dT%H:%M:%SZ'
+}
+
+stale_ts() {
+  python3 -c "
+from datetime import datetime, timezone, timedelta
+t = datetime.now(timezone.utc) - timedelta(hours=3)
+print(t.strftime('%Y-%m-%dT%H:%M:%SZ'))
+"
+}
+
+old_ts_1s() {
+  python3 -c "
+from datetime import datetime, timezone, timedelta
+t = datetime.now(timezone.utc) - timedelta(seconds=5)
+print(t.strftime('%Y-%m-%dT%H:%M:%SZ'))
+"
+}
+
+# ─────────────────────────────────────────────────
+# Test 8: Empty stack → no warning line, normal output
+# ─────────────────────────────────────────────────
+echo "--- Test 8: Empty .agent-stack → no stale warning, normal output ---"
+TEST_ROOT=$(mktemp -d)
+TEST_BATON="$TEST_ROOT/.baton"
+mkdir -p "$TEST_BATON/logs"
+write_todo "$TEST_BATON" 5 2
+write_state_with_trackers "$TEST_BATON" "2" "idle" 0 '[]' 0 0 0 '[]'
+# agent-stack does not exist (or is empty)
+output=$(run_hook "$TEST_ROOT")
+assert_not_contains "8a: no stale warning when stack is empty" "$output" "[Baton] ⚠ Cleaned"
+assert_contains "8b: normal statusline still present" "$output" "[Baton]"
+rm -rf "$TEST_ROOT"
+echo ""
+
+# ─────────────────────────────────────────────────
+# Test 9: Stack with 3 zombies → warning shown with count, then normal output
+# ─────────────────────────────────────────────────
+echo "--- Test 9: Stack with 3 zombie entries → warning with count, normal statusline ---"
+TEST_ROOT=$(mktemp -d)
+TEST_BATON="$TEST_ROOT/.baton"
+mkdir -p "$TEST_BATON/logs"
+write_todo "$TEST_BATON" 5 2
+write_state_with_trackers "$TEST_BATON" "2" "idle" 0 '[]' 0 0 0 '[]'
+FRESH=$(now_ts)
+STALE=$(stale_ts)
+STACK="$TEST_BATON/logs/.agent-stack"
+# 3 zombie entries: 2 empty-name + 1 stale TTL
+printf '%s|\n' "$FRESH" >> "$STACK"
+printf '%s|\n' "$FRESH" >> "$STACK"
+printf '%s|claude-baton:old-worker\n' "$STALE" >> "$STACK"
+output=$(run_hook "$TEST_ROOT")
+assert_contains "9a: stale warning with count 3" "$output" "[Baton] ⚠ Cleaned 3 stale agent-stack entries (TTL=2h)"
+assert_contains "9b: normal [Baton] statusline still present after warning" "$output" "idle"
+rm -rf "$TEST_ROOT"
+echo ""
+
+# ─────────────────────────────────────────────────
+# Test 10: Mixed stack → only zombies removed, valid kept, count in warning
+# ─────────────────────────────────────────────────
+echo "--- Test 10: Mixed stack → 1 zombie removed, 2 valid kept, warning shows count 1 ---"
+TEST_ROOT=$(mktemp -d)
+TEST_BATON="$TEST_ROOT/.baton"
+mkdir -p "$TEST_BATON/logs"
+write_todo "$TEST_BATON" 5 2
+write_state_with_trackers "$TEST_BATON" "2" "idle" 0 '[]' 0 0 0 '[]'
+FRESH=$(now_ts)
+STACK="$TEST_BATON/logs/.agent-stack"
+# 1 zombie + 2 valid fresh entries
+printf '%s|\n' "$FRESH" >> "$STACK"
+printf '%s|claude-baton:worker-agent\n' "$FRESH" >> "$STACK"
+printf '%s|claude-baton:qa-unit\n' "$FRESH" >> "$STACK"
+output=$(run_hook "$TEST_ROOT")
+assert_contains "10a: warning shows count 1 for single zombie" "$output" "[Baton] ⚠ Cleaned 1 stale agent-stack entries (TTL=2h)"
+assert_contains "10b: normal statusline present" "$output" "[Baton]"
+# Confirm valid entries still remain (stack file has 2 lines)
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+remaining=$(wc -l < "$STACK" | tr -d ' ')
+if [ "$remaining" = "2" ]; then
+  PASS=$((PASS + 1))
+  echo -e "${GREEN}PASS${NC}: 10c: 2 valid entries remain in stack file"
+else
+  FAIL=$((FAIL + 1))
+  echo -e "${RED}FAIL${NC}: 10c: 2 valid entries remain in stack file (expected=2, actual=$remaining)"
+fi
+rm -rf "$TEST_ROOT"
+echo ""
+
+# ─────────────────────────────────────────────────
+# Test 11: STACK_TTL_SECONDS=1 with old entry → removed and warned
+# ─────────────────────────────────────────────────
+echo "--- Test 11: STACK_TTL_SECONDS=1, old entry (5s) → removed and warning shown ---"
+TEST_ROOT=$(mktemp -d)
+TEST_BATON="$TEST_ROOT/.baton"
+mkdir -p "$TEST_BATON/logs"
+write_todo "$TEST_BATON" 5 2
+write_state_with_trackers "$TEST_BATON" "2" "idle" 0 '[]' 0 0 0 '[]'
+OLD=$(old_ts_1s)
+STACK="$TEST_BATON/logs/.agent-stack"
+printf '%s|claude-baton:worker-agent\n' "$OLD" >> "$STACK"
+# run_hook_with_ttl: same as run_hook but passes STACK_TTL_SECONDS env var
+json11=$(python3 -c "
+import json
+print(json.dumps({
+    'hook_event_name': 'UserPromptSubmit',
+    'session_id': 'test-session',
+    'user_prompt': 'continue'
+}))
+")
+output=$(echo "$json11" | BATON_ROOT="$TEST_ROOT" STACK_TTL_SECONDS=1 bash "$HOOK_SCRIPT" 2>/dev/null || true)
+assert_contains "11a: TTL=1 expired entry → warning shown" "$output" "[Baton] ⚠ Cleaned 1 stale agent-stack entries (TTL=2h)"
+assert_contains "11b: normal statusline present after warning" "$output" "[Baton]"
+rm -rf "$TEST_ROOT"
+echo ""
+
+# ─────────────────────────────────────────────────
 # Summary
 # ─────────────────────────────────────────────────
 echo "=== Summary ==="

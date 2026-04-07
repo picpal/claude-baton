@@ -9,6 +9,9 @@ source "$SCRIPT_DIR/state-manager.sh"
 # .baton이 없으면 스킵
 [ -d "$BATON_DIR" ] || exit 0
 
+# Stale agent-stack detection — prune zombie entries on every prompt
+PRUNED_COUNT=$(prune_stale_stack_entries "$BATON_LOG_DIR/.agent-stack" 2>/dev/null || echo 0)
+
 USER_PROMPT=$(hook_get_field "user_prompt")
 
 # 슬래시 커맨드는 스킵
@@ -71,6 +74,9 @@ fi
 
 if [ "$LAST_PHASE" = "$PHASE" ]; then
   # Same phase — output 1-line summary only
+  if [ "${PRUNED_COUNT:-0}" -gt 0 ] 2>/dev/null; then
+    echo "[Baton] ⚠ Cleaned ${PRUNED_COUNT} stale agent-stack entries (TTL=2h)"
+  fi
   cat <<EOF
 <user-prompt-submit-hook>
 [Baton] T:${TIER}|P:${PHASE}|${PROGRESS_DISPLAY}
@@ -80,6 +86,9 @@ else
   # Phase changed or first run — output full block and update cache
   mkdir -p "$(dirname "$LAST_PHASE_FILE")"
   printf '%s' "$PHASE" > "$LAST_PHASE_FILE"
+  if [ "${PRUNED_COUNT:-0}" -gt 0 ] 2>/dev/null; then
+    echo "[Baton] ⚠ Cleaned ${PRUNED_COUNT} stale agent-stack entries (TTL=2h)"
+  fi
   cat <<EOF
 <user-prompt-submit-hook>
 [Baton] Tier: ${TIER} | Phase: ${PHASE} | Tasks: ${PROGRESS_DISPLAY}
