@@ -482,6 +482,72 @@ handle_qa_result_marker() {
 }
 
 # -------------------------------------------------------------------
+# M1 helper: persist a deferred regression intent so it can be replayed
+# once the .agent-stack drains. Used when regress_to_phase returns rc=4
+# (SC-REGRESS-01) because a sibling parallel agent is still active and
+# the regression cannot fire yet.
+#
+# Stored under top-level `regressionDeferred` to avoid conflicting with
+# the existing `regressionPending` field (which SC-REGRESS-04 uses to
+# signal "user must retry with --force"). M1's regressionDeferred has
+# different semantics: "auto-replay when stack drains".
+#
+# Arguments:
+#   $1 — target phase (worker | taskmgr | ...)
+#   $2 — reason string
+#   $3 — force flag ("--force" or empty)
+# -------------------------------------------------------------------
+_persist_regression_deferred() {
+  local target="$1"
+  local reason="$2"
+  local force_flag="$3"
+
+  state_write "regressionDeferred.target" "$target"
+  state_write "regressionDeferred.reason" "$reason"
+  state_write "regressionDeferred.force" "${force_flag:-}"
+  state_write "regressionDeferred.timestamp" "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+  echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] M1: regression deferred (rc=4, sibling active) target=$target reason=\"$reason\"" \
+    >> "$BATON_LOG_DIR/exec.log"
+}
+
+# -------------------------------------------------------------------
+# M1 helper: clear regressionDeferred fields after a successful replay.
+# -------------------------------------------------------------------
+_clear_regression_deferred() {
+  state_write "regressionDeferred.target" ""
+  state_write "regressionDeferred.reason" ""
+  state_write "regressionDeferred.force" ""
+  state_write "regressionDeferred.timestamp" ""
+}
+
+# -------------------------------------------------------------------
+# M1 helper: invoke regress_to_phase for a (target,reason,force) tuple
+# and capture rc=4 (SC-REGRESS-01) so the caller can persist a deferred
+# intent instead of silently dropping the FAIL signal.
+#
+# Returns:
+#   0 — regression executed successfully
+#   4 — sibling agent still active; caller MUST persist regressionDeferred
+#   *  — other failure (already logged by regress_to_phase to stderr/exec.log)
+# -------------------------------------------------------------------
+_invoke_regress_capture_rc4() {
+  local target="$1"
+  local reason="$2"
+  local force_flag="$3"
+
+  # shellcheck source=/dev/null
+  source "$SCRIPT_DIR/regress-to-phase.sh"
+
+  local rc=0
+  if [ -n "$force_flag" ]; then
+    regress_to_phase "$target" "$reason" "$force_flag" 2>>"$BATON_LOG_DIR/exec.log" || rc=$?
+  else
+    regress_to_phase "$target" "$reason" 2>>"$BATON_LOG_DIR/exec.log" || rc=$?
+  fi
+  return "$rc"
+}
+
+# -------------------------------------------------------------------
 # Shared QA regression dispatcher — called by handle_qa_unit_stop and
 # handle_qa_integration_stop after handle_qa_result_marker returns.
 #
@@ -492,10 +558,17 @@ handle_qa_result_marker() {
 # Dispatches regress_to_phase on FAIL/ESCALATED.
 # Logs failure to exec.log but does NOT propagate non-zero exit codes.
 #
-# NOTE: The .agent-stack pop in the main stop handler (lines above this
-# function) runs BEFORE any handle_qa_*_stop call.  By the time this
-# function executes, the agent has already been removed from the stack,
-# so SC-REGRESS-01 (.agent-stack non-empty guard) will NOT trigger.
+# M1 fix: when regress_to_phase returns rc=4 (SC-REGRESS-01 — sibling
+# parallel agent still active in .agent-stack), the FAIL signal is no
+# longer silently dropped. Instead, _persist_regression_deferred records
+# the (target, reason, force) tuple under regressionDeferred. The main
+# stop handler later calls _replay_deferred_regression_if_ready, which
+# replays the regression once the .agent-stack drains.
+#
+# NOTE: For the SOLO (non-parallel) case, the .agent-stack pop in the
+# main stop handler runs BEFORE this function, so SC-REGRESS-01 will not
+# trigger and the regression executes inline. The deferred path only
+# fires for true parallel-sibling races.
 # -------------------------------------------------------------------
 _dispatch_qa_regression() {
   local result="$1"
@@ -516,30 +589,92 @@ _dispatch_qa_regression() {
       # state_read may return "null" for missing key
       [ "$retry_count" = "null" ] && retry_count=0
 
-      # shellcheck source=/dev/null
-      source "$SCRIPT_DIR/regress-to-phase.sh"
-
+      local target reason force_flag
       if [ "$retry_count" -ge "$QA_MAX_RETRIES" ]; then
-        regress_to_phase "taskmgr" \
-          "QA retry exhausted for ${task_id} (count=${retry_count})" \
-          "--force" 2>>"$BATON_LOG_DIR/exec.log" || true
+        target="taskmgr"
+        reason="QA retry exhausted for ${task_id} (count=${retry_count})"
+        force_flag="--force"
       else
-        regress_to_phase "worker" \
-          "QA failure retry #${retry_count} for ${task_id}" \
-          2>>"$BATON_LOG_DIR/exec.log" || true
+        target="worker"
+        reason="QA failure retry #${retry_count} for ${task_id}"
+        force_flag=""
+      fi
+
+      local rc=0
+      _invoke_regress_capture_rc4 "$target" "$reason" "$force_flag" || rc=$?
+
+      if [ "$rc" -eq 4 ]; then
+        # M1: sibling agent still in .agent-stack — defer for replay
+        _persist_regression_deferred "$target" "$reason" "$force_flag"
+      elif [ "$rc" -ne 0 ]; then
+        echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] M1: regression failed rc=$rc target=$target reason=\"$reason\"" \
+          >> "$BATON_LOG_DIR/exec.log"
       fi
       ;;
     ESCALATED)
       local task_id
       task_id=$(extract_qa_task_id "$output")
 
-      # shellcheck source=/dev/null
-      source "$SCRIPT_DIR/regress-to-phase.sh"
-      regress_to_phase "taskmgr" \
-        "QA escalated for ${task_id}" \
-        "--force" 2>>"$BATON_LOG_DIR/exec.log" || true
+      local target="taskmgr"
+      local reason="QA escalated for ${task_id}"
+      local force_flag="--force"
+
+      local rc=0
+      _invoke_regress_capture_rc4 "$target" "$reason" "$force_flag" || rc=$?
+
+      if [ "$rc" -eq 4 ]; then
+        # M1: sibling agent still in .agent-stack — defer for replay
+        _persist_regression_deferred "$target" "$reason" "$force_flag"
+      elif [ "$rc" -ne 0 ]; then
+        echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] M1: regression failed rc=$rc target=$target reason=\"$reason\"" \
+          >> "$BATON_LOG_DIR/exec.log"
+      fi
       ;;
   esac
+}
+
+# -------------------------------------------------------------------
+# M1 replay: after the stop event handler has popped the current agent
+# AND processed its handle_*_stop dispatch, check whether the
+# .agent-stack has drained AND regressionDeferred.target is set. If so,
+# replay the deferred regression now that no parallel sibling remains.
+#
+# Called at the very end of the `stop` event case in the main handler.
+# Safe to call unconditionally — no-op when no deferred intent is set.
+# -------------------------------------------------------------------
+_replay_deferred_regression_if_ready() {
+  # Bail if .agent-stack still has entries (another sibling is active)
+  if [ -f "$AGENT_STACK_FILE" ] && [ -s "$AGENT_STACK_FILE" ]; then
+    return 0
+  fi
+
+  local pending_target
+  pending_target=$(state_read "regressionDeferred.target")
+  if [ -z "$pending_target" ] || [ "$pending_target" = "null" ] || [ "$pending_target" = '""' ]; then
+    return 0
+  fi
+
+  local pending_reason pending_force
+  pending_reason=$(state_read "regressionDeferred.reason")
+  pending_force=$(state_read "regressionDeferred.force")
+  [ "$pending_reason" = "null" ] && pending_reason=""
+  [ "$pending_force" = "null" ] && pending_force=""
+
+  echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] M1: replaying deferred regression target=$pending_target reason=\"$pending_reason\"" \
+    >> "$BATON_LOG_DIR/exec.log"
+
+  local rc=0
+  _invoke_regress_capture_rc4 "$pending_target" "$pending_reason" "$pending_force" || rc=$?
+
+  # Clear regardless of rc — if the replay still fails (e.g. securityHalt
+  # got set in the meantime) we do not want to loop forever. The failure
+  # is already logged to exec.log by the helper above.
+  _clear_regression_deferred
+
+  if [ "$rc" -ne 0 ] && [ "$rc" -ne 4 ]; then
+    echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] M1: replayed regression failed rc=$rc (cleared anyway)" \
+      >> "$BATON_LOG_DIR/exec.log"
+  fi
 }
 
 # -------------------------------------------------------------------
@@ -652,8 +787,14 @@ case "$EVENT" in
       fi
     fi
 
+    # Defense-in-depth TTL prune: remove zombies BEFORE appending new agent
+    prune_stale_stack_entries "$AGENT_STACK_FILE" "${STACK_TTL_SECONDS:-7200}" >/dev/null 2>&1 || true
+
     # Append to agent stack (existing behavior)
     echo "${TIMESTAMP}|${AGENT_NAME}" >> "$AGENT_STACK_FILE"
+
+    # Log AGENT_START to exec.log
+    echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] AGENT_START agent=$START_AGENT_TYPE name=\"$AGENT_NAME\"" >> "$BATON_LOG_DIR/exec.log"
     ;;
 
   stop)
@@ -665,6 +806,9 @@ case "$EVENT" in
 
     # NEW: Update state.json based on agent type
     AGENT_TYPE=$(detect_agent_type "$AGENT_NAME")
+
+    # Log AGENT_STOP to exec.log
+    echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] AGENT_STOP agent=$AGENT_TYPE name=\"$AGENT_NAME\"" >> "$BATON_LOG_DIR/exec.log"
 
     # Ensure state.json exists
     if [ ! -f "$STATE_FILE" ]; then
@@ -708,5 +852,12 @@ case "$EVENT" in
     if [ "$AGENT_TYPE" != "unknown" ]; then
       update_current_phase
     fi
+
+    # M1: replay deferred regression if .agent-stack drained on this stop.
+    # Must run AFTER all handle_*_stop dispatches AND after the .agent-stack
+    # pop above so that the "stack empty" check correctly reflects the
+    # post-pop state. The replay itself overwrites currentPhase, so it
+    # also runs AFTER update_current_phase to avoid being clobbered.
+    _replay_deferred_regression_if_ready
     ;;
 esac

@@ -290,6 +290,159 @@ rm -rf "$T"
 echo ""
 
 # ─────────────────────────────────────────────────────────────────────
+# Test 6: start event writes AGENT_START to exec.log
+#         → exec.log contains AGENT_START with agent name
+# ─────────────────────────────────────────────────────────────────────
+echo "--- Test 6: start event → AGENT_START logged with agent name ---"
+
+T=$(mktemp -d)
+mkdir -p "$T/.baton/logs"
+EXEC_LOG="$T/.baton/logs/exec.log"
+json=$(make_analysis_start_json)
+run_start "$T" "$json"
+
+# Check AGENT_START appears in exec.log
+if grep -q "AGENT_START" "$EXEC_LOG" 2>/dev/null; then
+  assert_eq "6a: exec.log contains AGENT_START" "true" "true"
+else
+  assert_eq "6a: exec.log contains AGENT_START" "true" "false"
+fi
+
+# Check agent name is logged
+if grep -q "agent=analysis" "$EXEC_LOG" 2>/dev/null; then
+  assert_eq "6b: AGENT_START includes agent type" "true" "true"
+else
+  assert_eq "6b: AGENT_START includes agent type" "true" "false"
+fi
+
+rm -rf "$T"
+echo ""
+
+# ─────────────────────────────────────────────────────────────────────
+# Test 7: stop event writes AGENT_STOP to exec.log
+#         → exec.log contains AGENT_STOP after stop event fires
+# ─────────────────────────────────────────────────────────────────────
+echo "--- Test 7: stop event → AGENT_STOP logged ---"
+
+T=$(mktemp -d)
+mkdir -p "$T/.baton/logs"
+EXEC_LOG="$T/.baton/logs/exec.log"
+
+# Build SubagentStop JSON for a worker agent
+stop_json=$(python3 -c "
+import json
+print(json.dumps({
+    'hook_event_name': 'SubagentStop',
+    'session_id': 'test-session',
+    'agent_type': 'claude-baton:worker-agent',
+    'agent_name': 'claude-baton:worker-agent',
+    'tool_response': {'content': 'QA_RESULT:PASS'}
+}))
+")
+
+# Pre-populate .agent-stack so stop has something to prune
+echo "$(date -u '+%Y-%m-%dT%H:%M:%SZ')|claude-baton:worker-agent" > "$T/.baton/logs/.agent-stack"
+
+# Initialize state so stop handler doesn't fail
+BATON_ROOT="$T" init_state_with_phase "$T" "worker" 2
+
+echo "$stop_json" | BATON_ROOT="$T" bash "$AGENT_LOGGER" stop > /dev/null 2>&1 || true
+
+if grep -q "AGENT_STOP" "$EXEC_LOG" 2>/dev/null; then
+  assert_eq "7a: exec.log contains AGENT_STOP" "true" "true"
+else
+  assert_eq "7a: exec.log contains AGENT_STOP" "true" "false"
+fi
+
+if grep -q "agent=worker" "$EXEC_LOG" 2>/dev/null; then
+  assert_eq "7b: AGENT_STOP includes agent type" "true" "true"
+else
+  assert_eq "7b: AGENT_STOP includes agent type" "true" "false"
+fi
+
+rm -rf "$T"
+echo ""
+
+# ─────────────────────────────────────────────────────────────────────
+# Test 8: start event with zombies in stack → zombies pruned BEFORE new agent added
+#         → exec.log shows STACK_PRUNE before AGENT_START
+#         → zombies are not in .agent-stack after start
+# ─────────────────────────────────────────────────────────────────────
+echo "--- Test 8: start with zombies → zombies pruned BEFORE new agent added ---"
+
+T=$(mktemp -d)
+mkdir -p "$T/.baton/logs"
+EXEC_LOG="$T/.baton/logs/exec.log"
+STACK_FILE="$T/.baton/logs/.agent-stack"
+
+# Populate zombie entries (empty agent name — pruned regardless of TTL)
+echo "2026-04-04T10:00:00Z|" > "$STACK_FILE"
+echo "2026-04-04T10:01:00Z|" >> "$STACK_FILE"
+
+# Use a non-analysis agent so it doesn't trigger rm -f of stack
+worker_start_json=$(python3 -c "
+import json
+print(json.dumps({
+    'hook_event_name': 'SubagentStart',
+    'session_id': 'test-session',
+    'agent_type': 'claude-baton:worker-agent',
+    'agent_name': 'claude-baton:worker-agent',
+    'tool_input': {'description': 'worker: implement task-05'}
+}))
+")
+
+BATON_ROOT="$T" init_state_with_phase "$T" "worker" 2
+
+run_start "$T" "$worker_start_json"
+
+# Zombies should not be in stack; only the new worker entry should remain
+zombie_count=$(grep -c "^2026-04-04" "$STACK_FILE" 2>/dev/null; true)
+assert_eq "8a: zombie entries removed from .agent-stack" "0" "$zombie_count"
+
+# New worker entry should be in stack
+worker_count=$(grep -c "worker-agent" "$STACK_FILE" 2>/dev/null || echo "0")
+assert_eq "8b: new worker entry present in .agent-stack" "1" "$worker_count"
+
+# STACK_PRUNE entries should appear in exec.log before AGENT_START
+prune_count=$(grep -c "STACK_PRUNE" "$EXEC_LOG" 2>/dev/null || echo "0")
+assert_eq "8c: STACK_PRUNE logged for zombie entries" "2" "$prune_count"
+
+if grep -q "AGENT_START" "$EXEC_LOG" 2>/dev/null; then
+  assert_eq "8d: AGENT_START logged after prune" "true" "true"
+else
+  assert_eq "8d: AGENT_START logged after prune" "true" "false"
+fi
+
+# Verify STACK_PRUNE appears before AGENT_START in exec.log
+prune_line=$(grep -n "STACK_PRUNE" "$EXEC_LOG" 2>/dev/null | head -1 | cut -d: -f1)
+start_line=$(grep -n "AGENT_START" "$EXEC_LOG" 2>/dev/null | head -1 | cut -d: -f1)
+if [ -n "$prune_line" ] && [ -n "$start_line" ] && [ "$prune_line" -lt "$start_line" ]; then
+  assert_eq "8e: STACK_PRUNE appears before AGENT_START in exec.log" "true" "true"
+else
+  assert_eq "8e: STACK_PRUNE appears before AGENT_START in exec.log" "true" "false"
+fi
+
+rm -rf "$T"
+echo ""
+
+# ─────────────────────────────────────────────────────────────────────
+# Test 9: No duplicate AGENT_START logging — single start → exactly 1 entry
+# ─────────────────────────────────────────────────────────────────────
+echo "--- Test 9: No duplicate AGENT_START logging ---"
+
+T=$(mktemp -d)
+mkdir -p "$T/.baton/logs"
+EXEC_LOG="$T/.baton/logs/exec.log"
+json=$(make_analysis_start_json)
+run_start "$T" "$json"
+
+start_count=$(grep -c "AGENT_START" "$EXEC_LOG" 2>/dev/null || echo "0")
+assert_eq "9a: exactly 1 AGENT_START entry per start event" "1" "$start_count"
+
+rm -rf "$T"
+echo ""
+
+# ─────────────────────────────────────────────────────────────────────
 # Summary
 # ─────────────────────────────────────────────────────────────────────
 echo "=== Summary ==="
