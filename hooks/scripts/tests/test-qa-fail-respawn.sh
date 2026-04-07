@@ -416,6 +416,194 @@ rm -rf "$T"
 echo ""
 
 # ─────────────────────────────────────────────────────────────────────
+# Test 10 (M1): Parallel QA — qa-unit FAIL while qa-integration is still
+# active → regression must be DEFERRED (not silently dropped), then
+# REPLAYED when the sibling stops and the .agent-stack drains.
+#
+# This test reproduces the M1 bug:
+#   1. .agent-stack = [qa-unit, qa-integration]   (parallel run)
+#   2. qa-unit stops with FAIL → prune_last_line removes the tail entry
+#      so .agent-stack still has 1 sibling entry. regress_to_phase
+#      hits SC-REGRESS-01 (rc=4). Without M1, the FAIL is silently lost.
+#   3. With M1: regressionDeferred is persisted to state.json.
+#   4. qa-integration stops (PASS) → stack drains to empty.
+#   5. The M1 replay logic at the end of the stop handler re-issues
+#      regress_to_phase with the deferred target. Regression executes.
+# ─────────────────────────────────────────────────────────────────────
+echo "--- Test 10 (M1): Parallel QA FAIL — regression deferred + replayed ---"
+
+T=$(mktemp -d)
+mkdir -p "$T/.baton/logs"
+BATON_ROOT="$T" init_qa_state "$T" '{}' 2
+
+# Pre-populate .agent-stack with BOTH parallel QA agents.
+# Order matters for prune_last_line: last line is popped first.
+echo "2026-04-05T00:00:00Z|claude-baton:qa-unit"        >  "$T/.baton/logs/.agent-stack"
+echo "2026-04-05T00:00:01Z|claude-baton:qa-integration" >> "$T/.baton/logs/.agent-stack"
+
+# ----- Step 1: qa-unit fires SubagentStop with FAIL -----
+# After prune_last_line, .agent-stack still has 1 entry (qa-unit).
+# handle_qa_unit_stop → _dispatch_qa_regression → regress_to_phase rc=4.
+# M1: must persist regressionDeferred instead of silently dropping.
+json=$(make_qa_unit_stop_json "QA_RESULT:FAIL:task-01")
+run_qa_stop "$T" "$json"
+
+actual_phase=$(read_state_field "$T" "currentPhase")
+deferred_target=$(read_state_field "$T" "regressionDeferred.target")
+deferred_reason=$(read_state_field "$T" "regressionDeferred.reason")
+stack_lines=$(wc -l < "$T/.baton/logs/.agent-stack" 2>/dev/null | tr -d ' ')
+
+assert_eq "10a: currentPhase still 'qa' (regression deferred, not yet replayed)" "qa" "$actual_phase"
+assert_eq "10b: regressionDeferred.target=worker (M1 persisted)" "worker" "$deferred_target"
+TOTAL=$((TOTAL + 1))
+if [ -n "$deferred_reason" ] && [ "$deferred_reason" != "null" ]; then
+  PASS=$((PASS + 1))
+  echo -e "${GREEN}PASS${NC}: 10c: regressionDeferred.reason recorded ('$deferred_reason')"
+else
+  FAIL=$((FAIL + 1))
+  echo -e "${RED}FAIL${NC}: 10c: regressionDeferred.reason should be set (got '$deferred_reason')"
+fi
+assert_eq "10d: .agent-stack still has 1 sibling entry after qa-unit pop" "1" "$stack_lines"
+
+# ----- Step 2: qa-integration fires SubagentStop with PASS -----
+# prune_last_line removes the last entry → stack drains to empty.
+# Replay logic must fire and execute regress_to_phase("worker") successfully.
+json=$(make_qa_integration_stop_json "QA_RESULT:PASS")
+run_qa_stop "$T" "$json"
+
+actual_phase=$(read_state_field "$T" "currentPhase")
+actual_worker_done=$(read_state_field "$T" "phaseFlags.workerCompleted")
+actual_rework=$(read_state_field "$T" "reworkStatus.active")
+deferred_after=$(read_state_field "$T" "regressionDeferred.target")
+
+assert_eq "10e: currentPhase=worker after replay (regression finally fired)" "worker" "$actual_phase"
+assert_eq "10f: phaseFlags.workerCompleted=false after replayed regress" "false" "$actual_worker_done"
+assert_true "10g: reworkStatus.active=true after replayed regress" "$actual_rework"
+TOTAL=$((TOTAL + 1))
+if [ "$deferred_after" = "null" ] || [ -z "$deferred_after" ] || [ "$deferred_after" = "" ]; then
+  PASS=$((PASS + 1))
+  echo -e "${GREEN}PASS${NC}: 10h: regressionDeferred cleared after replay"
+else
+  FAIL=$((FAIL + 1))
+  echo -e "${RED}FAIL${NC}: 10h: regressionDeferred should be cleared (got '$deferred_after')"
+fi
+rm -rf "$T"
+
+echo ""
+
+# ─────────────────────────────────────────────────────────────────────
+# Test 11 (M1): Parallel QA where the SECOND agent triggers the replay.
+# Verifies that the replay happens regardless of which sibling fails first.
+# Scenario: qa-integration FAIL while qa-unit is still active.
+# ─────────────────────────────────────────────────────────────────────
+echo "--- Test 11 (M1): Parallel QA — qa-integration FAIL deferred + replayed ---"
+
+T=$(mktemp -d)
+mkdir -p "$T/.baton/logs"
+BATON_ROOT="$T" init_qa_state "$T" '{}' 2
+
+# Stack: qa-integration is the LAST line so it pops first.
+echo "2026-04-05T00:00:00Z|claude-baton:qa-unit"        >  "$T/.baton/logs/.agent-stack"
+echo "2026-04-05T00:00:01Z|claude-baton:qa-integration" >> "$T/.baton/logs/.agent-stack"
+
+# qa-integration stops first with FAIL → deferred
+json=$(make_qa_integration_stop_json "QA_RESULT:FAIL:task-02")
+run_qa_stop "$T" "$json"
+
+deferred_target=$(read_state_field "$T" "regressionDeferred.target")
+assert_eq "11a: regressionDeferred.target=worker after qa-integration FAIL" "worker" "$deferred_target"
+
+# qa-unit then stops with PASS → stack drains, replay fires
+json=$(make_qa_unit_stop_json "QA_RESULT:PASS")
+run_qa_stop "$T" "$json"
+
+actual_phase=$(read_state_field "$T" "currentPhase")
+deferred_after=$(read_state_field "$T" "regressionDeferred.target")
+
+assert_eq "11b: currentPhase=worker after sibling drains stack and replay fires" "worker" "$actual_phase"
+TOTAL=$((TOTAL + 1))
+if [ "$deferred_after" = "null" ] || [ -z "$deferred_after" ] || [ "$deferred_after" = "" ]; then
+  PASS=$((PASS + 1))
+  echo -e "${GREEN}PASS${NC}: 11c: regressionDeferred cleared after replay"
+else
+  FAIL=$((FAIL + 1))
+  echo -e "${RED}FAIL${NC}: 11c: regressionDeferred should be cleared (got '$deferred_after')"
+fi
+rm -rf "$T"
+
+echo ""
+
+# ─────────────────────────────────────────────────────────────────────
+# Test 12 (M1): Parallel QA where BOTH siblings FAIL.
+# Second FAIL must overwrite the deferred target (last write wins) but the
+# replay still ends with currentPhase=worker (worker is the shared target).
+# Also verifies escalation: if the second FAIL pushes retry_count to threshold,
+# the deferred target switches to taskmgr.
+# ─────────────────────────────────────────────────────────────────────
+echo "--- Test 12 (M1): Parallel QA — both siblings FAIL, replay still fires ---"
+
+T=$(mktemp -d)
+mkdir -p "$T/.baton/logs"
+BATON_ROOT="$T" init_qa_state "$T" '{}' 2
+
+echo "2026-04-05T00:00:00Z|claude-baton:qa-unit"        >  "$T/.baton/logs/.agent-stack"
+echo "2026-04-05T00:00:01Z|claude-baton:qa-integration" >> "$T/.baton/logs/.agent-stack"
+
+# qa-unit FAIL → deferred (sibling still in stack)
+json=$(make_qa_unit_stop_json "QA_RESULT:FAIL:task-01")
+run_qa_stop "$T" "$json"
+
+# qa-integration FAIL → stack drains; the integration handler ALSO defers
+# (sibling drained mid-handler is OK because the pop happens first), then
+# the replay path kicks in.
+json=$(make_qa_integration_stop_json "QA_RESULT:FAIL:task-02")
+run_qa_stop "$T" "$json"
+
+actual_phase=$(read_state_field "$T" "currentPhase")
+unit_retry=$(read_state_field "$T" "qaRetryCount.task-01")
+int_retry=$(read_state_field "$T" "qaRetryCount.task-02")
+
+assert_eq "12a: currentPhase=worker after both FAILs (regression replayed)" "worker" "$actual_phase"
+assert_eq "12b: qaRetryCount.task-01=1 incremented for unit FAIL" "1" "$unit_retry"
+assert_eq "12c: qaRetryCount.task-02=1 incremented for integration FAIL" "1" "$int_retry"
+rm -rf "$T"
+
+echo ""
+
+# ─────────────────────────────────────────────────────────────────────
+# Test 13 (M1): Single-agent stop (non-parallel) must NOT touch
+# regressionDeferred. This guards against regressions: the M1 path only
+# fires when SC-REGRESS-01 actually returned rc=4.
+# ─────────────────────────────────────────────────────────────────────
+echo "--- Test 13 (M1): Solo QA FAIL leaves regressionDeferred unset ---"
+
+T=$(mktemp -d)
+mkdir -p "$T/.baton/logs"
+BATON_ROOT="$T" init_qa_state "$T" '{}' 2
+
+# Solo: only qa-unit on the stack → pop drains it → regress succeeds
+echo "2026-04-05T00:00:00Z|claude-baton:qa-unit" > "$T/.baton/logs/.agent-stack"
+
+json=$(make_qa_unit_stop_json "QA_RESULT:FAIL:task-01")
+run_qa_stop "$T" "$json"
+
+actual_phase=$(read_state_field "$T" "currentPhase")
+deferred=$(read_state_field "$T" "regressionDeferred.target")
+
+assert_eq "13a: solo FAIL still goes straight to worker" "worker" "$actual_phase"
+TOTAL=$((TOTAL + 1))
+if [ "$deferred" = "null" ] || [ -z "$deferred" ] || [ "$deferred" = "" ]; then
+  PASS=$((PASS + 1))
+  echo -e "${GREEN}PASS${NC}: 13b: regressionDeferred unset on solo (SC-REGRESS-01 not triggered)"
+else
+  FAIL=$((FAIL + 1))
+  echo -e "${RED}FAIL${NC}: 13b: regressionDeferred should be unset on solo (got '$deferred')"
+fi
+rm -rf "$T"
+
+echo ""
+
+# ─────────────────────────────────────────────────────────────────────
 # Summary
 # ─────────────────────────────────────────────────────────────────────
 echo "=== Summary ==="
