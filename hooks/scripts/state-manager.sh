@@ -407,7 +407,8 @@ import os, sys, tempfile
 from datetime import datetime, timezone
 
 stack_file = os.environ['STACK_FILE']
-ttl = int(os.environ.get('STACK_TTL_SECONDS', 7200))
+# Minimum floor 60s prevents STACK_TTL_SECONDS=0 from instantly clearing the stack
+ttl = max(60, int(os.environ.get('STACK_TTL_SECONDS', 7200)))
 exec_log = os.environ.get('BATON_EXEC_LOG', '')
 now = datetime.now(timezone.utc)
 
