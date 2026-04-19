@@ -20,6 +20,12 @@ All work must be delegated by spawning specialized agents.
 ## Complexity Scoring
 Complexity scoring and Tier thresholds are defined in baton-orchestrator skill (references/scoring.md).
 
+## Auto-Mode
+- Default: `autoMode=true` — 파이프라인 자동 진행 (기존 동작)
+- `/baton:auto off` → 수동 모드, 각 단계를 `/baton:{phase}`로 개별 실행
+- Worker→QA 연쇄는 항상 자동 실행 (TDD 원칙 보호)
+- Regression (QA 실패 재시도, Security Rollback)은 모드와 무관하게 항상 자동 실행
+
 ## Pipeline by Tier
 
 **Tier 1 — Light**

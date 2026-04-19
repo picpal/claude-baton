@@ -44,9 +44,10 @@ with open(lock_path, 'w') as lock_fd:
     current_version = data.get('version', 1)
     changed = False
 
-    # Full default schema (version 3)
+    # Full default schema (version 4)
     default_schema = {
-        'version': 3,
+        'version': 4,
+        'autoMode': True,
         'currentTier': None,
         'currentPhase': 'idle',
         'phaseFlags': {
@@ -149,7 +150,8 @@ with open(lock_path, 'w') as lock_fd:
     # state is authoritative; state_migrate handles upgrades on its own path).
     if not os.path.exists(state_file):
         state = {
-            'version': 3,
+            'version': 4,
+            'autoMode': True,
             'currentTier': None,
             'currentPhase': 'idle',
             'phaseFlags': {

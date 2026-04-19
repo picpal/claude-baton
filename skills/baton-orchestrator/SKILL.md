@@ -39,9 +39,13 @@ model: opus
 Use `scripts/score.sh` for automated calculation.
 
 ## Phase Transition Policy
-- All phase transitions are **automatic** — Main proceeds immediately after a phase completes.
-- **Do NOT ask the user for confirmation to start the pipeline.** After scoring, immediately spawn the first agent. Never say "시작할까요?", "바로 시작할게요", "Shall I proceed?" or similar. Just start.
+- Phase transitions respect the `autoMode` setting in state.json.
+- When `autoMode=true` (default): all transitions are automatic — Main proceeds immediately after a phase completes.
+- When `autoMode=false`: Main waits after each phase. User triggers next via `/baton:{phase}` commands.
+- **Do NOT ask the user for confirmation** even in auto-mode. After scoring, immediately spawn the first agent.
 - The only interactive phase is **Interview** (waits for user responses).
+- **TDD protection**: Worker→QA transition is always automatic regardless of autoMode.
+- Regressions (QA failure retries, security rollback) execute automatically regardless of autoMode.
 - Exceptions requiring user input: Security Rollback (R04/R05), Tier 3 Planning conflicts (R10), checkpoint restore, stack detection failure (R11).
 
 ## State Management
@@ -76,6 +80,23 @@ If `workerCompleted=false` and `workerTracker.doneCount > 0`, check todo.md for 
 | Tier 1 (Light) | [Issue Registration (bug/fix only)] → Analysis → Worker → Unit QA → Done | references/tier1.md |
 | Tier 2 (Standard) | Issue Registration → Interview → Analysis → Planning → TaskMgr → Workers → QA → Review(3) → Done | references/tier2.md |
 | Tier 3 (Full) | Issue Registration → Interview → Analysis → Planning(3) → TaskMgr → Workers → QA → Review(5) → Done | references/tier3.md |
+
+## Manual Phase Commands
+When autoMode is off (or for re-running a specific phase), use individual commands:
+
+| Command | Phase | Produces |
+|---------|-------|----------|
+| /baton:issue | Phase 0: Issue Registration | .baton/issue.md |
+| /baton:interview | Phase 1: Interview | Confirmed requirements |
+| /baton:analyze | Phase 2: Analysis | .baton/complexity-score.md |
+| /baton:plan | Phase 3: Planning | .baton/plan.md |
+| /baton:tasks | Phase 4: Task Manager | .baton/todo.md |
+| /baton:work | Phase 5: Workers | Commits → auto qa-unit |
+| /baton:qa | Phase 6: QA | Test results |
+| /baton:review | Phase 7: Code Review | .baton/review-report.md |
+
+These commands work in auto-mode too — useful for re-running a specific phase.
+Toggle mode with `/baton:auto on|off`.
 
 ## Worker Model Assignment
 - **sonnet**: files ≤3, no dependencies, no architectural decisions

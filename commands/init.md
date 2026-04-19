@@ -287,7 +287,8 @@ For `state.json`, initialize with:
 
 ```json
 {
-  "version": 1,
+  "version": 4,
+  "autoMode": true,
   "currentTier": null,
   "currentPhase": "idle",
   "phaseFlags": {
@@ -298,15 +299,23 @@ For `state.json`, initialize with:
     "workerCompleted": false,
     "qaUnitPassed": false,
     "qaIntegrationPassed": false,
-    "reviewCompleted": false
+    "reviewCompleted": false,
+    "issueRegistered": false
   },
   "planningTracker": { "expected": 0, "completed": [] },
   "reviewTracker": { "expected": 0, "completed": [] },
   "workerTracker": { "expected": 0, "doneCount": 0 },
   "qaRetryCount": {},
-  "reworkStatus": { "active": false, "attemptCount": 0 },
+  "reworkStatus": { "active": false, "attemptCount": 0, "hasWarnings": false },
+  "regressionHistory": [],
+  "artifactStale": {},
+  "lastCommitAttemptCount": 0,
   "securityHalt": false,
   "lastSafeTag": null,
+  "issueNumber": null,
+  "issueUrl": null,
+  "issueLabels": [],
+  "isExistingIssue": false,
   "timestamp": ""
 }
 ```

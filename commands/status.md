@@ -14,6 +14,7 @@ Display the current state of the claude-baton pipeline.
 - Detected stacks (from .baton/complexity-score.md)
 - QA status
 - safe tags (git tag -l 'safe/*')
+- Auto-mode state (ON/OFF)
 - LOG_MODE setting
 - Any active security constraints
 
@@ -25,7 +26,7 @@ Tier:     {1|2|3}
 Phase:    {current phase}
 Stacks:   {detected stacks}
 LOG_MODE: {minimal|execution|verbose}
-Auto-proceed: ON (Interview phase is the only interactive phase)
+Auto-mode: {ON|OFF} → {자동 진행|수동 /baton:{phase} 명령어로 진행}
 
 Tasks:
   ✅ task-01: {description}

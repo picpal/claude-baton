@@ -72,6 +72,10 @@ else
   PROGRESS_DISPLAY="${DONE}/${TOTAL}"
 fi
 
+AUTO_MODE=$(state_read "autoMode" 2>/dev/null || echo "true")
+AUTO_LABEL="A"
+[ "$AUTO_MODE" = "false" ] && AUTO_LABEL="M"
+
 if [ "$LAST_PHASE" = "$PHASE" ]; then
   # Same phase — output 1-line summary only
   if [ "${PRUNED_COUNT:-0}" -gt 0 ] 2>/dev/null; then
@@ -79,7 +83,7 @@ if [ "$LAST_PHASE" = "$PHASE" ]; then
   fi
   cat <<EOF
 <user-prompt-submit-hook>
-[Baton] T:${TIER}|P:${PHASE}|${PROGRESS_DISPLAY}
+[Baton] T:${TIER}|P:${PHASE}|${AUTO_LABEL}|${PROGRESS_DISPLAY}
 </user-prompt-submit-hook>
 EOF
 else
@@ -91,7 +95,7 @@ else
   fi
   cat <<EOF
 <user-prompt-submit-hook>
-[Baton] Tier: ${TIER} | Phase: ${PHASE} | Tasks: ${PROGRESS_DISPLAY}
+[Baton] Tier: ${TIER} | Phase: ${PHASE} | Mode: ${AUTO_LABEL} | Tasks: ${PROGRESS_DISPLAY}
 
 Intent 분류 후 행동:
 A) NEW_TASK — 새 개발 요청 → Analysis Agent 즉시 스폰 (state를 idle로 리셋)
@@ -102,6 +106,7 @@ B) CONTINUE — 파이프라인 재개:
 C) QUERY — 질문/상태 확인 → 직접 응답 (코드 분석 제외)
 D) OVERRIDE — 사용자 수정 지시 → state 업데이트 + lesson 기록
 E) COMMAND — 슬래시 명령어 → 명령어 실행
+F) MANUAL_PHASE — /baton:{phase} 명령어 → 해당 단계만 실행 (autoMode=OFF일 때)
 
 금지 행위:
 - Main이 소스 코드 Read/Grep 금지 (Agent에 위임)

@@ -849,8 +849,23 @@ case "$EVENT" in
     esac
 
     # Auto-advance phase after any state update (skip for unknown)
+    # When autoMode=false, phase flags are updated but currentPhase does NOT advance
+    # Exception: Worker→QA always auto-advances (TDD minimum verification)
     if [ "$AGENT_TYPE" != "unknown" ]; then
-      update_current_phase
+      local auto_mode
+      auto_mode=$(state_read "autoMode" 2>/dev/null || echo "true")
+      if [ "$auto_mode" != "false" ]; then
+        update_current_phase
+      else
+        # Manual mode: only Worker→QA auto-advances (TDD principle protection)
+        local worker_done
+        worker_done=$(state_read "phaseFlags.workerCompleted" 2>/dev/null || echo "false")
+        local qa_passed
+        qa_passed=$(state_read "phaseFlags.qaUnitPassed" 2>/dev/null || echo "false")
+        if [ "$worker_done" = "true" ] && [ "$qa_passed" != "true" ]; then
+          state_set_phase "qa"
+        fi
+      fi
     fi
 
     # M1: replay deferred regression if .agent-stack drained on this stop.
