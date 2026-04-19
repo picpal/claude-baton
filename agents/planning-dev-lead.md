@@ -20,11 +20,6 @@ Establish implementation strategy from a development execution perspective.
 3. Technical risks — difficulty and uncertainty assessment
 4. Reusable code — leverage existing code
 
-## External Documentation Lookup (context7)
-When assessing technical risks or implementation strategies involving external library APIs:
-- Use context7 MCP to check official documentation for correct usage patterns and known pitfalls.
-- Skip if the library usage is straightforward and well-understood.
-
 ## Output
 - Implementation strategy document
 - Task priorities and dependency graph

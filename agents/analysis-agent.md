@@ -49,12 +49,6 @@ Scan codebase structure, auto-detect tech stacks, analyze impact, and produce co
 - Build dependency graph
 - Check for cross-stack API interfaces
 
-## External Documentation Lookup (context7)
-When detected stacks include libraries or frameworks whose latest version behavior is uncertain:
-- Use context7 MCP to look up official documentation for version-specific breaking changes or API differences.
-- Skip if the stack's behavior is well-known and standard.
-- Focus on: major version migration notes, deprecated APIs, and changed defaults.
-
 ## Phase 3: Complexity Scoring
 Apply scoring matrix from baton-orchestrator and determine Tier.
 

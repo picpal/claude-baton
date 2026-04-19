@@ -21,11 +21,6 @@ Provide design direction from a system architecture perspective.
 4. Scalability — flexibility for future changes
 5. Existing architecture alignment — consistency with current codebase
 
-## External Documentation Lookup (context7)
-When designing interfaces or component structures that depend on external library APIs:
-- Use context7 MCP to verify the correct API signatures and patterns from official documentation.
-- Skip if the library usage is standard and well-known.
-
 ## Output
 - Architecture diagram (text-based)
 - Component responsibility definitions
