@@ -1,4 +1,5 @@
 ---
+name: baton:init
 description: |
   Initialize the claude-baton pipeline in the current project.
   Creates CLAUDE.md (with rules), .claude/settings.json (hooks),
