@@ -75,9 +75,12 @@ All workers follow strict TDD: test first, implement second, refactor third.
 |---------|-------------|
 | `/baton:init` | Initialize pipeline in current project |
 | `/baton:status` | Show pipeline status |
+| `/baton:auto` | Toggle auto-mode on/off (default: on) |
+| `/baton:issue` | Register an issue manually |
 | `/baton:checkpoint` | Save, list, and restore named checkpoints |
 | `/baton:rollback` | Security rollback to last safe tag |
 | `/baton:tier` | Show/override current Tier |
+| `/baton:{phase}` | Manually run a phase: interview, analyze, plan, tasks, work, qa, review |
 
 ## Pipeline Agents
 
@@ -100,11 +103,6 @@ All workers follow strict TDD: test first, implement second, refactor third.
 
 ### Environment Variables
 - `LOG_MODE`: minimal / execution (default) / verbose
-
-### Options (pass with any request)
-- `--ask-mode on/off` — Force confirmation before each phase
-- `--log-mode minimal/execution/verbose` — Set logging level
-- `--tier 1/2/3` — Force tier (for testing)
 
 ## License
 

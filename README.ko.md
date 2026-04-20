@@ -76,9 +76,12 @@ claude-baton은 빌드 파일(package.json, build.gradle, go.mod 등)을 읽어 
 |--------|------|
 | `/baton:init` | 현재 프로젝트에서 파이프라인 초기화 |
 | `/baton:status` | 파이프라인 상태 표시 |
+| `/baton:auto` | 자동 모드 on/off 전환 (기본: on) |
+| `/baton:issue` | 이슈 수동 등록 |
 | `/baton:checkpoint` | 체크포인트 저장, 목록, 복원 |
 | `/baton:rollback` | 마지막 safe 태그로 보안 롤백 |
 | `/baton:tier` | 현재 티어 표시/변경 |
+| `/baton:{phase}` | 단계 수동 실행: interview, analyze, plan, tasks, work, qa, review |
 
 ## 파이프라인 에이전트
 
@@ -101,11 +104,6 @@ claude-baton은 빌드 파일(package.json, build.gradle, go.mod 등)을 읽어 
 
 ### 환경 변수
 - `LOG_MODE`: minimal / execution (기본값) / verbose
-
-### 옵션 (요청 시 함께 전달)
-- `--ask-mode on/off` — 각 페이즈 전 확인 강제
-- `--log-mode minimal/execution/verbose` — 로깅 레벨 설정
-- `--tier 1/2/3` — 티어 강제 (테스트용)
 
 ## 라이선스
 
