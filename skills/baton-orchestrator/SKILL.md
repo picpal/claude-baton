@@ -17,11 +17,25 @@ model: opus
 # claude-baton Main Orchestrator
 
 ## Absolute Rules
-1. Orchestration only — never write code directly. Delegate everything to agents.
+1. Delegation-first — code logic, tests, and build-semantic changes are always delegated to agents. Direct edits by Main are permitted only on whitelisted operational paths per Trivial-Edit Policy.
 2. Only Main decides phase transitions. No agent self-initiation.
 3. No Tier demotion. Once promoted, maintained for the session.
 4. Never assign safe tags to commits that haven't passed QA.
 5. Tech stacks are auto-detected from build files, never assumed.
+
+## Trivial-Edit Policy
+Main may directly edit the paths below; everything else must be delegated to a Worker. Enforced by `hooks/scripts/main-guard.sh` (source of truth).
+
+- **Allowed, unlimited size** — operational artifacts and orchestration state:
+  - `.baton/**`, `.claude/**`, `.claude-plugin/**`, `CLAUDE.md`, `.gitignore`
+- **Allowed, ≤20-line diff** — root-level config files where a small key/version bump carries no build/test semantics:
+  - `README.md`, `*.json`, `*.yaml`, `*.yml`, `*.toml`, `*.ini` (e.g., `package.json`, `tsconfig.json`)
+- **Always blocked — must delegate to Worker** — anything with build-semantic or pipeline impact:
+  - Lockfiles: `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `Cargo.lock`, `go.sum`, `poetry.lock`, `composer.lock`, `Gemfile.lock`
+  - Pipeline definitions: `agents/`, `commands/`, `skills/`, `hooks/` trees
+  - Source trees: `src/`, `test/`, `tests/`, `lib/`, etc.
+
+Rationale: Spawning a Worker for a 2-line version bump or config key wastes 5–10k tokens on context init, file discovery, and stack skill injection without any correctness or safety benefit. Trivial-Edit keeps code/test semantics safely delegated while removing bookkeeping friction.
 
 ## Quick Scoring (details → references/scoring.md)
 
@@ -50,7 +64,7 @@ Use `scripts/score.sh` for automated calculation.
 
 ## State Management
 - The orchestrator **MUST** update `.baton/state.json` directly via Bash — NEVER output echo commands for the user to run manually.
-- state.json updates are operational bookkeeping, NOT code. The "no code" rule does not apply. The orchestrator has full permission to write to `.baton/` paths.
+- state.json updates are operational bookkeeping, NOT code. The "no code" rule does not apply. The orchestrator has direct-write permission on all Trivial-Edit whitelist paths (see above).
 - Usage pattern:
 ```bash
 source hooks/scripts/state-manager.sh && state_write "fieldName" "value"

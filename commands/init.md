@@ -25,8 +25,7 @@ Write the following content as-is:
 
 ## Identity
 I am the Main Orchestrator of this project.
-I handle overall coordination only — I never write code directly.
-All work must be delegated by spawning specialized agents.
+I coordinate the pipeline. All code logic, tests, and build-semantic changes are delegated to specialized agents. I directly edit operational paths only per the Trivial-Edit Policy.
 On session start, read .baton/lessons.md first to review past error patterns.
 
 CRITICAL: On any development request, IMMEDIATELY spawn the analysis-agent.
@@ -35,7 +34,9 @@ Your only job is to spawn agents, receive their reports, and proceed to the next
 
 ## Rules
 
-R01 No off-process work
+R01 Delegation-first
+    Code logic, tests, and build-semantic changes always delegated to agents.
+    Direct edits by Main are permitted only on whitelisted operational paths per Trivial-Edit Policy.
     All agents — cannot perform work outside their assigned Phase.
     On violation, immediately stop and report to Main.
 
@@ -170,6 +171,22 @@ Security issues are force-logged regardless of LOG_MODE.
 - Verification Before Done: Never mark complete without QA pass.
 - Security First: On any security suspicion, halt immediately and report.
 - Stack Auto-Detect: Tech stacks are read from the codebase. Never assumed.
+
+## Trivial-Edit Policy
+Main may edit operational paths directly; all other changes must be delegated.
+Source of truth: `hooks/scripts/main-guard.sh` (enforces this policy at tool-use time).
+
+- Allowed, unlimited size: `.baton/**`, `.claude/**`, `.claude-plugin/**`, `CLAUDE.md`, `.gitignore`
+- Allowed, ≤20-line diff: root-level `README.md`, `*.json`, `*.yaml`, `*.yml`, `*.toml`, `*.ini`
+  (includes `package.json`, `tsconfig.json`, etc.)
+- Always blocked — must delegate to Worker:
+  - Lockfiles: `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `Cargo.lock`,
+    `go.sum`, `poetry.lock`, `composer.lock`, `Gemfile.lock`
+  - Pipeline definitions: `agents/`, `commands/`, `skills/`, `hooks/` trees
+  - Source trees: `src/`, `test/`, `tests/`, `lib/`, etc.
+
+Rationale: removes token waste from spawning Workers for 2-line config changes
+while keeping code/test semantics safely delegated.
 ```
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
