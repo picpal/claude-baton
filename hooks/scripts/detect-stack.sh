@@ -9,11 +9,16 @@ EVENT="${1:-}"
 [ -d "$BATON_DIR" ] || exit 0
 
 if [ "$EVENT" = "pre-spawn" ]; then
-  if [ -f "$BATON_DIR/security-constraints.md" ]; then
-    echo "[baton] Security constraints detected — will be injected into agent context"
-  fi
-
-  if [ -f "$BATON_DIR/complexity-score.md" ]; then
-    echo "[baton] Stack detection results available in complexity-score.md"
+  CONTEXT_PARTS=()
+  [ -f "$BATON_DIR/security-constraints.md" ] && CONTEXT_PARTS+=("Security constraints active (.baton/security-constraints.md)")
+  [ -f "$BATON_DIR/complexity-score.md" ] && CONTEXT_PARTS+=("Stack detection results in .baton/complexity-score.md")
+  if [ ${#CONTEXT_PARTS[@]} -gt 0 ]; then
+    CONTEXT=$(printf '%s. ' "${CONTEXT_PARTS[@]}" | sed 's/\. $//')
+    jq -n --arg ctx "$CONTEXT" '{
+      hookSpecificOutput: {
+        hookEventName: "PreToolUse",
+        additionalContext: $ctx
+      }
+    }'
   fi
 fi

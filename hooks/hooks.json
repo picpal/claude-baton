@@ -6,10 +6,10 @@
         "hooks": [{"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/user-prompt-submit.sh"}]
       }
     ],
-    "InstructionsLoaded": [
+    "SessionStart": [
       {
-        "matcher": "",
-        "hooks": [{"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/on-instructions-loaded.sh"}]
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [{"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/session-start.sh"}]
       }
     ],
     "PreToolUse": [
@@ -59,22 +59,10 @@
         "hooks": [{"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/on-stop-failure.sh"}]
       }
     ],
-    "PostCompact": [
+    "PreCompact": [
       {
         "matcher": "",
-        "hooks": [{"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/on-post-compact.sh"}]
-      }
-    ],
-    "WorktreeCreate": [
-      {
-        "matcher": "",
-        "hooks": [{"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/log-event.sh worktree-created"}]
-      }
-    ],
-    "WorktreeRemove": [
-      {
-        "matcher": "",
-        "hooks": [{"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/log-event.sh worktree-removed"}]
+        "hooks": [{"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/pre-compact.sh"}]
       }
     ]
   }
