@@ -53,7 +53,18 @@ When the Task Manager writes todo.md, it references the file→stack mapping in 
 to auto-tag each task with its stack. Main injects the corresponding stacks/ skill into context when spawning Workers.
 
 ## Worker Model Assignment
-Worker model assignment rules are defined in baton-orchestrator skill.
+Detailed assignment rules live in baton-orchestrator skill. Top-level guidance:
+
+- **claude-haiku-4-5**: trivial Tier 1 (files=1, no deps, no logic change)
+- **claude-sonnet-4-6**: files ≤3, no cross-service, no architectural decisions
+- **claude-opus-4-7**: files >3, cross-service, architectural decisions, security/auth/payment
+
+Always pass `model` parameter explicitly when spawning agents — frontmatter aliases (`opus`/`sonnet`) may be ignored due to inheritance.
+
+### Effort guidance (per Tier)
+- **Tier 1 Worker**: `effort: medium`
+- **Tier 2 Reviewer / Worker (complex)**: `effort: high`
+- **Tier 3 Planner / Security Guardian**: `effort: xhigh` (Opus 4.7, v2.1.111+)
 
 ## QA Rules
 QA rules are defined in baton-orchestrator skill and qa-unit/qa-integration agent definitions.
