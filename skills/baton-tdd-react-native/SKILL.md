@@ -9,6 +9,10 @@ description: |
   Extends baton-tdd-react with React Native-specific testing frameworks, security rules, and quality checks.
 extends: baton-tdd-react
 allowed-tools: Read, Write, Bash
+paths:
+  - "**/*.tsx"
+  - "**/metro.config.*"
+effort: medium
 ---
 
 # TDD Enforcer — React Native

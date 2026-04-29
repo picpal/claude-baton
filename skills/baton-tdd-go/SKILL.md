@@ -10,6 +10,10 @@ description: |
   static analysis (go vet, staticcheck), and quality checks.
 extends: baton-tdd-base
 allowed-tools: Read, Write, Bash
+paths:
+  - "**/*.go"
+  - "**/go.mod"
+effort: medium
 ---
 
 # TDD Enforcer — Go

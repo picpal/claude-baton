@@ -8,6 +8,11 @@ description: |
   Extends baton-tdd-base with TypeScript-specific frameworks, security rules, and quality checks.
 extends: baton-tdd-base
 allowed-tools: Read, Write, Bash
+paths:
+  - "**/*.ts"
+  - "**/*.tsx"
+  - "**/tsconfig.json"
+effort: medium
 ---
 
 # TDD Enforcer — TypeScript

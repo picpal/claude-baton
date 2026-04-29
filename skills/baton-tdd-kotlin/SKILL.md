@@ -8,6 +8,10 @@ description: |
   Do NOT use for pure Java projects (use baton-tdd-java) or Spring Boot projects without Kotlin (use baton-tdd-spring-boot).
 extends: baton-tdd-java
 allowed-tools: Read, Write, Bash
+paths:
+  - "**/*.kt"
+  - "**/*.kts"
+effort: medium
 ---
 
 # TDD Enforcer — Kotlin

@@ -7,6 +7,11 @@ description: |
   Do NOT use for Spring Boot projects (use baton-tdd-spring-boot) or Kotlin projects (use baton-tdd-kotlin).
 extends: baton-tdd-base
 allowed-tools: Read, Write, Bash
+paths:
+  - "**/*.java"
+  - "**/pom.xml"
+  - "**/build.gradle"
+effort: medium
 ---
 
 # TDD Enforcer — Java

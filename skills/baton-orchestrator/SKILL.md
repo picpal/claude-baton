@@ -113,12 +113,32 @@ These commands work in auto-mode too — useful for re-running a specific phase.
 Toggle mode with `/baton:auto on|off`.
 
 ## Worker Model Assignment
-- **sonnet**: files ≤3, no dependencies, no architectural decisions
-- **opus**: files >3, cross-service, architectural decisions, security-related
+명시적 모델 ID 사용 — frontmatter alias는 inheritance로 무시될 수 있음:
+
+- **claude-haiku-4-5**: trivial Tier 1 (files=1, no deps, no logic change)
+- **claude-sonnet-4-6**: files ≤3, no cross-service, no architectural decisions
+- **claude-opus-4-7**: files >3, cross-service, architectural decisions, security/auth/payment
+
+### Effort guidance (per Tier)
+- **Tier 1 Worker**: `effort: medium`
+- **Tier 2 Reviewer / complex Worker**: `effort: high`
+- **Tier 3 Planner / Security Guardian**: `effort: xhigh` (Opus 4.7, v2.1.111+)
 
 ## Agent Spawn — Explicit Model Parameter (Required)
 When spawning any agent via the Agent tool, **always pass the `model` parameter explicitly**.
 Do NOT rely on agent definition frontmatter alone — it may be ignored due to inheritance.
+
+### Subagent Skills Preload (선택적 최적화)
+공식 docs `code.claude.com/docs/en/sub-agents#preload-skills-into-subagents` 기준:
+Worker 에이전트 frontmatter에 `skills:` 필드로 stack 스킬을 정적 preload 가능.
+현재는 Task Manager가 todo.md 작성 후 Main이 동적 주입 — 정적 preload로 바꾸면
+스킬 로드 오버헤드 감소.
+
+제약: `disable-model-invocation: true` 스킬은 preload 불가.
+baton-tdd-* 스킬들은 그 필드가 없어서 preload 가능.
+
+**적용 시 주의**: 정적 preload는 단일 stack 작업에 적합. 멀티 stack 작업 시
+동적 주입 흐름이 더 적합 — 결정은 Task Manager가.
 
 ## QA Rules
 - Unit QA + Integration QA run in parallel

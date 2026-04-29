@@ -8,6 +8,10 @@ description: |
   Extends baton-tdd-typescript with React-specific testing patterns, security rules, and quality checks.
 extends: baton-tdd-typescript
 allowed-tools: Read, Write, Bash
+paths:
+  - "**/*.tsx"
+  - "**/*.jsx"
+effort: medium
 ---
 
 # TDD Enforcer — React

@@ -9,6 +9,10 @@ description: |
   security rules (python-dotenv, SQLAlchemy ORM), and quality checks.
 extends: baton-tdd-base
 allowed-tools: Read, Write, Bash
+paths:
+  - "**/*.py"
+  - "**/pyproject.toml"
+effort: medium
 ---
 
 # TDD Enforcer — Python

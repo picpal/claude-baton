@@ -8,6 +8,7 @@ description: |
   For language-specific rules, use baton-tdd-{lang} instead (they auto-include this base).
   Test code must be written before implementation code. Enforces scope-lock rules.
 allowed-tools: Read, Write, Bash
+effort: medium
 ---
 
 # TDD Enforcer Skill (Base)

@@ -9,6 +9,10 @@ description: |
   Extends baton-tdd-react-native with Expo-specific testing frameworks, security rules, and quality checks.
 extends: baton-tdd-react-native
 allowed-tools: Read, Write, Bash
+paths:
+  - "**/app.json"
+  - "**/app.config.*"
+effort: medium
 ---
 
 # TDD Enforcer — Expo

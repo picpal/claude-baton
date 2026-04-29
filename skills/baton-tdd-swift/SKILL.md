@@ -10,6 +10,10 @@ description: |
   security rules (Keychain, no UserDefaults for secrets), and Xcode Code Coverage.
 extends: baton-tdd-base
 allowed-tools: Read, Write, Bash
+paths:
+  - "**/*.swift"
+  - "**/Package.swift"
+effort: medium
 ---
 
 # TDD Enforcer — Swift

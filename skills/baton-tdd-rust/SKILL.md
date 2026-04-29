@@ -10,6 +10,10 @@ description: |
   linting (cargo clippy), security rules (unsafe audit), and quality checks.
 extends: baton-tdd-base
 allowed-tools: Read, Write, Bash
+paths:
+  - "**/*.rs"
+  - "**/Cargo.toml"
+effort: medium
 ---
 
 # TDD Enforcer — Rust

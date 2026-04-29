@@ -8,6 +8,11 @@ description: |
   Extends baton-tdd-react with Next.js-specific testing patterns, security rules, and quality checks.
 extends: baton-tdd-react
 allowed-tools: Read, Write, Bash
+paths:
+  - "**/next.config.*"
+  - "**/app/**/*.ts"
+  - "**/app/**/*.tsx"
+effort: medium
 ---
 
 # TDD Enforcer — Next.js
