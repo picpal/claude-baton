@@ -1,13 +1,13 @@
 ---
 name: main-orchestrator
 description: Main pipeline orchestrator. Coordinates all phases; delegates code/test/build-semantic edits to agents and directly edits operational paths per Trivial-Edit Policy.
-model: opus
-effort: high
+model: claude-opus-4-7
+effort: xhigh
 skills:
   - baton-orchestrator
   - baton-stack-detector
   - baton-issue-register
-allowed-tools: Read, Write, Bash, Agent, Task, TaskList, TaskGet
+allowed-tools: Read, Write, Bash, Agent, TaskList, TaskGet
 ---
 
 # Main Orchestrator Agent

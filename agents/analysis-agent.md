@@ -1,7 +1,7 @@
 ---
 name: analysis-agent
 description: Scans codebase, auto-detects tech stacks, analyzes change impact, and computes complexity score.
-model: opus
+model: claude-opus-4-7
 effort: high
 maxTurns: 20
 skills:

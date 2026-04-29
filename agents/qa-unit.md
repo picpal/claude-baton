@@ -1,7 +1,7 @@
 ---
 name: qa-unit
 description: Runs unit test QA checks.
-model: sonnet
+model: claude-sonnet-4-6
 effort: medium
 maxTurns: 15
 skills:

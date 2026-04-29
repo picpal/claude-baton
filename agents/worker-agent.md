@@ -1,8 +1,9 @@
 ---
 name: worker-agent
 description: Executes assigned tasks following TDD principles and scope-lock rules.
-model: opus
+model: claude-opus-4-7
 effort: high
+isolation: worktree
 maxTurns: 30
 skills:
   - baton-tdd-base

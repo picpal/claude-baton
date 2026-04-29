@@ -1,8 +1,8 @@
 ---
 name: task-manager
 description: Splits plans into independent tasks with stack auto-tagging.
-model: opus
-effort: medium
+model: claude-opus-4-7
+effort: high
 maxTurns: 15
 skills:
   - baton-task-splitter

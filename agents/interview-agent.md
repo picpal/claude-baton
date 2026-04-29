@@ -1,7 +1,7 @@
 ---
 name: interview-agent
 description: Identifies ambiguous requirements and asks targeted questions.
-model: sonnet
+model: claude-sonnet-4-6
 effort: medium
 maxTurns: 10
 allowed-tools: Read

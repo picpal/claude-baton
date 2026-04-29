@@ -1,7 +1,7 @@
 ---
 name: qa-integration
 description: Runs integration and contract test QA checks.
-model: sonnet
+model: claude-sonnet-4-6
 effort: medium
 maxTurns: 15
 skills:

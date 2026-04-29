@@ -1,8 +1,9 @@
 ---
 name: standards-keeper
 description: Standards compliance reviewer for Tier 3 only.
-model: sonnet
-effort: medium
+model: claude-sonnet-4-6
+effort: high
+memory: project
 maxTurns: 10
 skills:
   - baton-review-rubric

@@ -1,8 +1,8 @@
 ---
 name: planning-architect
 description: System Architect for Tier 3 planning. Provides architecture direction.
-model: opus
-effort: high
+model: claude-opus-4-7
+effort: xhigh
 maxTurns: 15
 skills:
   - baton-orchestrator

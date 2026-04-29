@@ -1,8 +1,8 @@
 ---
 name: planning-security
 description: Security Architect for Tier 3 planning. Reviews design from security perspective.
-model: opus
-effort: high
+model: claude-opus-4-7
+effort: xhigh
 maxTurns: 15
 skills:
   - baton-security-patterns

@@ -1,7 +1,7 @@
 ---
 name: issue-register
 description: Registers or links a GitHub Issue at pipeline start (Phase 0). Executes baton-issue-register skill.
-model: sonnet
+model: claude-sonnet-4-6
 effort: low
 maxTurns: 10
 skills:

@@ -1,8 +1,9 @@
 ---
 name: tdd-enforcer-reviewer
 description: TDD compliance reviewer for Tier 2 and 3.
-model: sonnet
-effort: medium
+model: claude-sonnet-4-6
+effort: high
+memory: project
 maxTurns: 13
 skills:
   - baton-tdd-base
