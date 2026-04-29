@@ -24,6 +24,26 @@ Main may directly edit these paths without delegation (enforced by `hooks/script
 
 Rationale: spawning a Worker for a 1-line version bump wastes 5–10k tokens on context init with no correctness benefit. Code/test semantics remain delegated, preserving TDD and scope-lock guarantees.
 
+## First-Action Decision Tree (모든 코드 관련 요청)
+
+요청 수신 시 다음 트리로 즉시 분기:
+
+| 상황 | 처리 | 이유 |
+|------|------|------|
+| 트리비얼 (1파일 ≤20줄, 의미 변경 X — typo/version bump/`.baton` state) | **Main 직접** | spawn 비용 > 가치 |
+| 코드 영역 **탐색** (다중 read/grep/find on `agents/`, `skills/`, `commands/`, `hooks/`, `src/`, `test/`, `lib/`) | **Explore agent (Haiku, read-only, 요약 반환)** | 컨텍스트 오염 차단 |
+| 코드 영역 **변경** (semantic edit, 다중 파일 write) | **Worker (Tier별 파이프라인)** | 안전성 + scope-lock + TDD |
+
+**금지**: Main이 보호 경로(`agents/`, `skills/`, `commands/`, `hooks/`, `src/`, `test/`, `lib/`)를 직접 Read/Grep/Bash(cat/grep/find/head -n 50+ 등)로 탐색하지 마라. `main-guard.sh` 가 hard enforcement.
+
+**허용된 Main의 직접 도구 사용**:
+- `git status/log/diff` 등 메타데이터 조회
+- `jq`로 JSON 파싱
+- `.baton/`, `.claude/`, `.claude-plugin/`, `CLAUDE.md`, root configs 의 read/write
+- TaskList/TaskGet/TaskUpdate
+
+**핵심 원칙**: "탐색을 Main에서 빼라. 트리비얼 변경은 Main에서 빼지 말라."
+
 ## Complexity Scoring
 Complexity scoring and Tier thresholds are defined in baton-orchestrator skill (references/scoring.md).
 

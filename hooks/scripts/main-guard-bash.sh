@@ -102,6 +102,67 @@ is_agent_stack_write() {
   return 1  # Read-only access — allow
 }
 
+# 탐색 행위 차단 — 보호 경로 대상 read-only 명령
+# 차단 verbs: cat, head, tail, less, grep, rg, find, fd, awk, sed
+# 허용: git, jq, ls, wc, stat, file, echo, printf, 보호 경로 미포함 명령
+# 반환: 차단할 verb를 echo (차단 메시지에 사용), 미발견 시 빈 문자열
+is_dangerous_explore() {
+  local cmd="$1"
+  # 따옴표 / heredoc 본문 제거하여 메시지 내 경로 노이즈 차단
+  local no_heredoc stripped
+  no_heredoc=$(strip_heredoc_bodies "$cmd")
+  stripped=$(strip_quoted_strings "$no_heredoc")
+
+  # 보호 경로 정규식 (단어 경계: 공백 시작/슬래시 / 앞 또는 줄 시작)
+  local protected_re='(^|[[:space:]/])(\.?/)?(agents|skills|commands|hooks|src|test|tests|lib)(/|[[:space:]]|$)'
+
+  # 보호 경로 미포함 → 통과
+  echo "$stripped" | grep -qE "$protected_re" || return 1
+
+  # 첫 토큰 (verb) 추출 — 파이프/세미콜론으로 분리된 각 절을 검사하면 좋지만
+  # 단순 첫 토큰 + 절 분리(파이프/세미콜론 단위) 검사로 충분
+  # 절(clause) 단위로 분리하여 각 절 verb 검사
+  local clauses
+  # |, ;, &&, || 로 절 분리 — sed 로 \n 변환
+  clauses=$(echo "$stripped" | sed -E 's/(\|\||&&|[|;&])/\n/g')
+
+  local clause first
+  while IFS= read -r clause; do
+    # 앞쪽 공백 제거
+    clause=$(echo "$clause" | sed -E 's/^[[:space:]]+//')
+    [ -z "$clause" ] && continue
+    # 절 안에 보호 경로 없으면 skip
+    echo "$clause" | grep -qE "$protected_re" || continue
+
+    # 첫 토큰 추출
+    first=$(echo "$clause" | awk '{print $1}')
+    # 절대경로 verb (e.g. /bin/cat) → basename
+    first=$(basename "$first" 2>/dev/null || echo "$first")
+
+    case "$first" in
+      cat|head|tail|less|grep|rg|find|fd|awk|sed)
+        # head -n N 의 경우 N >= 50 만 차단 (소량 peek 허용)
+        if [ "$first" = "head" ]; then
+          # -n N 또는 -nN 형태 추출
+          local n
+          n=$(echo "$clause" | grep -oE '\-n[[:space:]]*[0-9]+|\-[0-9]+' | head -1 | grep -oE '[0-9]+' | head -1)
+          if [ -n "$n" ] && [ "$n" -lt 50 ] 2>/dev/null; then
+            continue
+          fi
+          # n 미지정 (default 10) 도 허용
+          if [ -z "$n" ]; then
+            continue
+          fi
+        fi
+        echo "$first"
+        return 0
+        ;;
+    esac
+  done <<< "$clauses"
+
+  return 1
+}
+
 # Check if command contains dangerous write patterns to non-.baton files
 is_dangerous_write() {
   local cmd="$1"
@@ -185,6 +246,12 @@ is_dangerous_write() {
 }
 
 main() {
+  # BATON_GUARD_DISABLE 우회 (디버깅용) — 모든 분기 이전에 처리
+  if [ "${BATON_GUARD_DISABLE:-}" = "1" ]; then
+    log "PASSED: BATON_GUARD_DISABLE=1"
+    exit 0
+  fi
+
   # .baton 디렉토리가 없으면 통과 (pre-init)
   if [ ! -d "$BATON_DIR" ]; then
     log "PASSED: Pre-init (no .baton dir)"
@@ -200,7 +267,7 @@ main() {
     block "⛔ [R01] Write to .agent-stack is permanently sealed. No agent may modify .agent-stack via Bash."
   fi
 
-  # ── 2. Subagent active → ALLOW (Worker bypass) ──
+  # ── 2. Subagent active → ALLOW (Worker / Explore agent bypass) ──
   if is_subagent_active; then
     local active_agent
     active_agent=$(tail -1 "$AGENT_STACK_FILE" 2>/dev/null | cut -d'|' -f2 || echo "unknown")
@@ -222,6 +289,15 @@ main() {
     log "BLOCKED: Dangerous bash command: $truncated"
 
     echo "⛔ [R01] Bash write blocked: $truncated — delegate to Worker agent." >&2
+    exit 2
+  fi
+
+  # 탐색 행위 차단 (보호 경로 대상 read-only verbs)
+  local explore_verb
+  explore_verb=$(is_dangerous_explore "$command")
+  if [ -n "$explore_verb" ]; then
+    log "BLOCKED: Explore verb '$explore_verb' on protected path"
+    echo "[main-guard-bash] BLOCKED $explore_verb on protected path — use Explore agent for read-only inspection" >&2
     exit 2
   fi
 

@@ -21,6 +21,12 @@
         ]
       },
       {
+        "matcher": "Read|Grep|Glob",
+        "hooks": [
+          {"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/main-guard.sh"}
+        ]
+      },
+      {
         "matcher": "Agent",
         "hooks": [
           {"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/phase-gate.sh"},

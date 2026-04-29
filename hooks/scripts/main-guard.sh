@@ -164,20 +164,117 @@ is_subagent_active() {
   return 1
 }
 
+# 탐색 차단용 보호 경로 (Read/Grep/Glob 전용)
+# - Edit/Write 의 is_excluded_pipeline_def 와 분리하여 의미 변경 방지
+# - 상대/절대 경로 모두 처리: dir/* 또는 */dir/* 패턴 매칭
+is_protected_explore_path() {
+  local path="$1"
+  [ -z "$path" ] && return 1
+  local dir
+  for dir in agents skills commands hooks src test tests lib; do
+    if [[ "$path" == "$dir" ]] || [[ "$path" == "$dir"/* ]] \
+       || [[ "$path" == "./$dir" ]] || [[ "$path" == "./$dir"/* ]] \
+       || [[ "$path" == */"$dir" ]] || [[ "$path" == */"$dir"/* ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+# Read 도구 분기 처리
+handle_read() {
+  local file_path="$1"
+  # 빈 경로는 Read 도구 자체가 에러 — fail-open
+  if [ -z "$file_path" ]; then
+    log "PASSED: Read with empty file_path"
+    exit 0
+  fi
+  if is_protected_explore_path "$file_path"; then
+    log "BLOCKED: Read on protected path ($file_path)"
+    echo "[main-guard] BLOCKED Read on protected path '$file_path' — use Explore agent (Haiku, read-only) instead" >&2
+    exit 2
+  fi
+  log "PASSED: Read non-protected ($file_path)"
+  exit 0
+}
+
+# Grep/Glob 도구 분기 처리
+handle_grep_glob() {
+  local tool_name="$1"
+  local path glob pattern
+  path=$(hook_get_field "tool_input.path" 2>/dev/null || echo "")
+  glob=$(hook_get_field "tool_input.glob" 2>/dev/null || echo "")
+  pattern=$(hook_get_field "tool_input.pattern" 2>/dev/null || echo "")
+
+  # 빈 path = cwd 전체 검색 → 보호 경로 포함하므로 차단
+  if [ -z "$path" ] && [ -z "$glob" ]; then
+    log "BLOCKED: $tool_name with empty path/glob (cwd-wide scan)"
+    echo "[main-guard] BLOCKED $tool_name on protected path '(cwd)' — use Explore agent (Haiku, read-only) instead" >&2
+    exit 2
+  fi
+
+  if [ -n "$path" ] && is_protected_explore_path "$path"; then
+    log "BLOCKED: $tool_name on protected path ($path)"
+    echo "[main-guard] BLOCKED $tool_name on protected path '$path' — use Explore agent (Haiku, read-only) instead" >&2
+    exit 2
+  fi
+
+  if [ -n "$glob" ] && is_protected_explore_path "$glob"; then
+    log "BLOCKED: $tool_name on protected glob ($glob)"
+    echo "[main-guard] BLOCKED $tool_name on protected path '$glob' — use Explore agent (Haiku, read-only) instead" >&2
+    exit 2
+  fi
+
+  log "PASSED: $tool_name non-protected (path=$path glob=$glob)"
+  exit 0
+}
+
 main() {
   local file_path tool_name
-  file_path=$(hook_get_field "tool_input.file_path" 2>/dev/null || echo "")
   tool_name=$(hook_get_field "tool_name" 2>/dev/null || echo "")
+  file_path=$(hook_get_field "tool_input.file_path" 2>/dev/null || echo "")
 
-  log "Checking: tool=$tool_name file=$file_path"
-
-  # .baton 디렉토리가 없으면 통과 (pre-init)
-  if [ ! -d "$BATON_DIR" ]; then
-    log "PASSED: Pre-init (no .baton dir)"
+  # BATON_GUARD_DISABLE 우회 (디버깅용) — 모든 분기 이전에 처리
+  if [ "${BATON_GUARD_DISABLE:-}" = "1" ]; then
+    log "PASSED: BATON_GUARD_DISABLE=1 (tool=$tool_name)"
     exit 0
   fi
 
-  # 파일 경로가 없으면 차단 (입력을 판별할 수 없음 → 안전을 위해 차단)
+  # Pre-init: .baton 디렉토리 없으면 통과
+  if [ ! -d "$BATON_DIR" ]; then
+    log "PASSED: Pre-init (no .baton dir, tool=$tool_name)"
+    exit 0
+  fi
+
+  # Subagent 실행 중이면 통과 (Worker / Explore agent)
+  if is_subagent_active; then
+    local active_agent
+    active_agent=$(tail -1 "$AGENT_STACK_FILE" 2>/dev/null | cut -d'|' -f2 || echo "unknown")
+    log "PASSED: Subagent active ($active_agent, tool=$tool_name)"
+    exit 0
+  fi
+
+  # 도구별 분기
+  case "$tool_name" in
+    Read)
+      handle_read "$file_path"
+      ;;
+    Grep|Glob)
+      handle_grep_glob "$tool_name"
+      ;;
+    Edit|Write)
+      # 기존 로직 유지 — 아래로 fall-through
+      ;;
+    *)
+      # 그 외 도구: 영향 없음
+      log "PASSED: Unhandled tool ($tool_name)"
+      exit 0
+      ;;
+  esac
+
+  log "Checking: tool=$tool_name file=$file_path"
+
+  # 파일 경로가 없으면 차단 (Edit/Write에서만 — 입력을 판별할 수 없음)
   if [ -z "$file_path" ]; then
     log "BLOCKED: Unable to determine file path from input"
     echo "⛔ [Main Guard] 파일 경로를 판별할 수 없습니다. 안전을 위해 차단합니다."
@@ -191,14 +288,6 @@ main() {
     log "DENIED: Protected pipeline file ($file_path)"
     echo "⛔ [Main Guard] .agent-stack is a protected pipeline file. Direct modification is not allowed."
     exit 1
-  fi
-
-  # Subagent 실행 중이면 통과 (Worker가 실행 중)
-  if is_subagent_active; then
-    local active_agent
-    active_agent=$(tail -1 "$AGENT_STACK_FILE" 2>/dev/null | cut -d'|' -f2 || echo "unknown")
-    log "PASSED: Subagent active ($active_agent)"
-    exit 0
   fi
 
   # Lockfile 차단 (경로 무관)
