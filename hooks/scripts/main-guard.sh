@@ -156,12 +156,33 @@ diff_line_count() {
   return 0
 }
 
-# Subagent 실행 중인지 확인
+# Subagent 실행 중인지 확인 — stale entries 자체 필터링 (방어선)
+# state-manager.sh의 prune_stale_stack_entries는 UserPromptSubmit/SubagentStart에만 호출되므로
+# 장기간 입력 없으면 stale 누적. 여기서 추가 TTL 검증으로 게이팅 회귀 차단.
 is_subagent_active() {
-  if [ -f "$AGENT_STACK_FILE" ] 2>/dev/null && [ -s "$AGENT_STACK_FILE" ] 2>/dev/null; then
-    return 0
-  fi
-  return 1
+  [ -f "$AGENT_STACK_FILE" ] 2>/dev/null && [ -s "$AGENT_STACK_FILE" ] 2>/dev/null || return 1
+
+  # TTL 기본 7200초 (state-manager.sh와 동일), 최소 60초
+  local ttl="${STACK_TTL_SECONDS:-7200}"
+  [ "$ttl" -lt 60 ] && ttl=60
+
+  local now epoch_ts age ts agent
+  now=$(date +%s)
+
+  while IFS='|' read -r ts agent; do
+    [ -z "$ts" ] && continue  # 빈 줄 skip
+    [ -z "${agent// /}" ] && continue  # 빈 agent (좀비) skip
+    # ISO timestamp 파싱 (예: 2026-04-30T15:23:47Z) — BSD date (macOS)
+    # TZ=UTC 강제: BSD date -j -f는 입력을 로컬타임존으로 해석하므로 UTC로 통일
+    epoch_ts=$(TZ=UTC date -j -f "%Y-%m-%dT%H:%M:%SZ" "$ts" +%s 2>/dev/null)
+    [ -z "$epoch_ts" ] && continue  # 파싱 실패 entry skip (좀비 취급)
+    age=$((now - epoch_ts))
+    if [ "$age" -le "$ttl" ]; then
+      return 0  # 살아있는 entry 하나라도 발견 → subagent active
+    fi
+  done < "$AGENT_STACK_FILE"
+
+  return 1  # 모든 entry stale
 }
 
 # 탐색 차단용 보호 경로 (Read/Grep/Glob 전용)

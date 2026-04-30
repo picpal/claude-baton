@@ -86,18 +86,28 @@ All workers follow strict TDD: test first, implement second, refactor third.
 
 | Agent | Role | Model |
 |-------|------|-------|
-| Main Orchestrator | Coordinates all phases | opus |
-| Interview Agent | Clarifies requirements | sonnet |
-| Analysis Agent | Stack detection + impact analysis | opus |
-| Planning (Security/Arch/Dev) | Tier 3 design | opus |
-| Task Manager | Task splitting + stack tagging | opus |
-| Worker | TDD implementation | auto |
-| QA (Unit/Integration) | Test verification | sonnet |
-| Security Guardian | Security review + Rollback | opus |
-| Quality Inspector | Code quality review | sonnet |
-| TDD Enforcer (Reviewer) | TDD compliance review | sonnet |
-| Performance Analyst | Performance review (Tier 3) | sonnet |
-| Standards Keeper | Standards review (Tier 3) | sonnet |
+| Main Orchestrator | Coordinates all phases | claude-opus-4-7 (effort: xhigh) |
+| Interview Agent | Clarifies requirements | claude-sonnet-4-6 |
+| Analysis Agent | Stack detection + impact analysis | claude-opus-4-7 |
+| Planning (Security/Arch/Dev) | Tier 3 design | claude-opus-4-7 (effort: xhigh) |
+| Task Manager | Task splitting + stack tagging | claude-opus-4-7 |
+| Worker | TDD implementation | claude-opus-4-7 (isolation: worktree) |
+| QA (Unit/Integration) | Test verification | claude-sonnet-4-6 |
+| Security Guardian | Security review + Rollback | claude-opus-4-7 (effort: xhigh) |
+| Quality Inspector | Code quality review | claude-sonnet-4-6 (memory: project) |
+| TDD Enforcer (Reviewer) | TDD compliance review | claude-sonnet-4-6 (memory: project) |
+| Performance Analyst | Performance review (Tier 3) | claude-sonnet-4-6 (memory: project) |
+| Standards Keeper | Standards review (Tier 3) | claude-sonnet-4-6 (memory: project) |
+
+## What's New in v1.11.0
+
+- **Explicit model IDs** — Pipeline agents now use Claude 4.x model IDs (Opus 4.7, Sonnet 4.6, Haiku 4.5) instead of aliases.
+- **Tier-aware effort levels** — Tier 3 planners and Security Guardian use `effort: xhigh` (Opus 4.7); reviewers use `effort: high`.
+- **Worker isolation** — `worker-agent` runs in an isolated git worktree (`isolation: worktree`), strengthening scope-lock with auto-cleanup.
+- **Review memory** — Review agents (Quality, TDD, Standards, Performance) accumulate codebase patterns via `memory: project`, complementing `lessons.md`.
+- **Stack-aware skill activation** — `paths` glob patterns auto-activate the right `baton-tdd-*` skill based on file extension.
+- **Hardened hook gating** — Main is blocked from direct read/grep/find on protected paths (`agents/`, `skills/`, `hooks/`, `src/`, etc.) — use Explore agent instead.
+- **Hook event cleanup** — Removed 4 unofficial events that never fired; migrated to official `SessionStart` / `PreCompact`.
 
 ## Configuration
 
